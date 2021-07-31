@@ -8,9 +8,10 @@ class ROCStarLoss(nn.Module):
         self.p = p
 
         self.epoch_true_acc = torch.zeros((dataloader_len, batch_size))
-        self.epoch_pred_acc = softmax(torch.rand((dataloader_len, batch_size, num_classes)), dim=-1)
-        self.prev_epoch_true = None
-        self.prev_epoch_pred = None
+        self.epoch_pred_acc = torch.zeros((dataloader_len, batch_size, num_classes))
+        
+        self.prev_epoch_true = torch.zeros_like(self.epoch_true_acc)
+        self.prev_epoch_pred = softmax(torch.rand_like(self.epoch_pred_acc), dim=-1)
 
         self.default_gamma = torch.tensor(0.2, dtype=torch.float)
     

@@ -9,7 +9,6 @@ from torchmetrics import (
 
 import torch
 from torch import nn
-from torch.nn import functional as F
 from torchvision.models import resnet18
 
 from losses import ROCStarLoss
@@ -60,6 +59,14 @@ class LightningG2Net(pl.LightningModule):
         else:
             raise NotImplementedError(self.optimizer_name)
     
+    def on_train_start(self):
+        if self.loss_fn_name == 'ROC_Star':
+            for batch_idx, batch in enumerate(self.train_dataloader()):
+                _, targets = batch
+                self.loss_fn.epoch_true_acc[batch_idx] = targets
+        
+        self.loss_fn.on_epoch_end()
+
     def training_step(self, batch, batch_idx):
         inputs, targets = batch
         logits = self.forward(inputs)
@@ -73,8 +80,8 @@ class LightningG2Net(pl.LightningModule):
         self.log_dict(metrics, on_step=False, on_epoch=True)
 
         if self.loss_fn_name == 'ROC_Star':
-            self.loss_fn.epoch_true[batch_idx] = targets
-            self.loss_fn.epoch_pred[batch_idx] = logits
+            self.loss_fn.epoch_true_acc[batch_idx] = targets
+            self.loss_fn.epoch_pred_acc[batch_idx] = logits
         
         return {'loss': loss, 'logits': logits}
     
