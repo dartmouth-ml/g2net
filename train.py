@@ -6,6 +6,7 @@ from pytorch_lightning.callbacks import (
     EarlyStopping
 )
 
+from dummy_dataloader import DummyModule
 from datamodule import DataModule
 from model import LightningG2Net
 
@@ -49,13 +50,14 @@ trainer = pl.Trainer(
     num_sanity_val_steps=0,
 
     resume_from_checkpoint=config.trainer.resume_from_checkpoint,
-    fast_dev_run=config.trainer.fast_dev_run,
+    # fast_dev_run=config.trainer.fast_dev_run,
+    fast_dev_run=True,
     deterministic=config.trainer.deterministic,
 )
 
-datamodule = DataModule(config.dataloader)
+datamodule = DummyModule(config.dataloader)
 
 model = LightningG2Net(config.model, config.policy)
 trainer.fit(model, datamodule=datamodule)
 
-create_submission(trainer, datamodule)
+# create_submission(trainer, datamodule)
