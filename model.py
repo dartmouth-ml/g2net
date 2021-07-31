@@ -20,7 +20,7 @@ class LightningG2Net(pl.LightningModule):
         super(LightningG2Net, self).__init__()
 
         self.resnet = self.configure_backbone(model_config['backbone'], model_config['resnet_pretrain'])
-        self.output_layer = nn.Linear(1000, 2)
+        self.resnet.fc = nn.Linear(512, 2)
 
         # hparams
         self.lr = policy_config['lr']
@@ -61,7 +61,7 @@ class LightningG2Net(pl.LightningModule):
         else:
             raise NotImplementedError(loss_fn)
 
-    def configure_optimizers(self,policy_config):
+    def configure_optimizer(self,policy_config):
         optimizer_name = policy_config['optimizer'];
         lr_scheduler_name = policy_config['lr_scheduler'];
 
@@ -84,7 +84,6 @@ class LightningG2Net(pl.LightningModule):
     def forward(self, x):
         # resnet
         x = self.resnet(x)
-        x = self.output_layer(x)
         
         return x
     

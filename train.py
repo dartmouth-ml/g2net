@@ -68,6 +68,6 @@ datamodule = DataModule(dataloader_config)
 datamodule.setup()
 
 model = LightningG2Net(model_config, policy_config)
-trainer.fit(model, datamodule=datamodule)
+trainer.fit(model, datamodule)
 
 create_submission(trainer, datamodule)

@@ -29,11 +29,12 @@ model_config = {
 }
 
 policy_config = {
-    "loss_fn": "ROC_Star",
+    "lr": .01,
+    "loss_fn": "CrossEntropy",
     "optimizer": "Adam",
     "learning_rate": 1e-3,
     
-    "scheduler_name": "ReduceLROnPlateau", # reduce lr after k iterations
+    "lr_scheduler": "ReduceLROnPlateau", # reduce lr after k iterations
     "step_size": "50", # epochs until reduce lr
     "gamma": 0.1, # scaling factor for gamma
 
@@ -42,13 +43,14 @@ policy_config = {
 logging_config = {
     "use_wandb": True,
     "name": "baseline",
+    "tags": [metadata_config["version"]],
     "project": "g2net",
     "entity": "dmlg"
 }
 
 trainer_config = {
-    "gpus": 1,
-    "auto_select_gpus": True,
+    "gpus": 0,
+    "auto_select_gpus": False,
 
     "min_epochs": 0,
     "max_epochs": 200,
