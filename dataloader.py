@@ -1,8 +1,10 @@
 from torch.utils.data import Dataset, DataLoader
+import pandas as pd
 import numpy as np
+from pathlib import Path
 from librosa import power_to_db
 from librosa.feature import melspectrogram
-from nnAudio.Spectrogram import CQT1992v2
+# from nnAudio.Spectrogram import CQT1992v2
 
 
 def make_spectrogram(time_series_data):
@@ -23,11 +25,11 @@ def make_spectrogram(time_series_data):
     return np.stack(spectrograms)
 
 
-class ImageDataset(Dataset):
-    def __init__(self, root_path, file_names, labels):
+class SpectrogramDataset(Dataset):
+    def __init__(self, data_path, file_names, labels):
         super().__init__()
 
-        self.root_path = root_path
+        self.data_path = data_path
         self.file_names = file_names
         self.labels = labels
 
@@ -49,7 +51,7 @@ class ImageDataset(Dataset):
         return spectrogram, label, file_name
 
     def convert_to_full_path(self, file_name):
-        full_path = self.root_path.joinpath(*[s for s in file_name[:3]], file_name).with_suffix(self.file_ext)
+        full_path = self.data_path.joinpath(*[s for s in file_name[:3]], file_name).with_suffix(self.file_ext)
         assert full_path.is_file(), full_path
 
         return full_path
@@ -57,9 +59,21 @@ class ImageDataset(Dataset):
     def __len__(self):
         return len(self.file_names)
 
+
+# TODO we want separate training and validation dataloaders
+def make_dataloader(batch_size):
+    data_path = Path.cwd().joinpath('data', 'train')
+    training_labels = pd.read_csv('./data/training_labels.csv')
+
+    dset = SpectrogramDataset(data_path, training_labels['id'], training_labels['target'])
+
+    return DataLoader(dataset=dset,
+                      batch_size=batch_size,
+                      shuffle=True)
+
+
 if __name__ == '__main__':
     test_series = np.load('data/train/7/7/7/777a1e4add.npy')
     spectrogram = make_spectrogram(test_series)
     print(type(spectrogram))
     print(spectrogram.shape)
-
