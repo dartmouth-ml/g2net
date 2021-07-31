@@ -2,9 +2,8 @@ from torch.utils.data import Dataset, DataLoader
 import pandas as pd
 import numpy as np
 from pathlib import Path
-
+from torchvision.transforms import ToTensor
 from spectrogram import make_spectrogram
-
 
 class SpectrogramDataset(Dataset):
     # data_path is a Path object
@@ -45,10 +44,8 @@ class SpectrogramDataset(Dataset):
 
 # TODO we want separate training and validation dataloaders
 def make_dataloader(batch_size):
-    data_path = Path.cwd().joinpath('data', 'train')
-    training_labels = pd.read_csv('./data/training_labels.csv')
-
-    dset = SpectrogramDataset(data_path, training_labels['id'], training_labels['target'])
+    data_path = Path.cwd().joinpath('data')
+    dset = SpectrogramDataset(data_path)
 
     return DataLoader(dataset=dset,
                       batch_size=batch_size,

@@ -118,7 +118,7 @@ class LightningG2Net(pl.LightningModule):
             self.loss_fn.on_epoch_end()
 
     def training_step(self, batch, batch_idx):
-        inputs, targets = batch
+        inputs, targets, filename = batch
         logits = self.forward(inputs)
         preds = torch.argmax(logits, dim=-1)
         loss = self.loss_fn(torch.squeeze(logits, dim=-1), targets)
@@ -136,7 +136,7 @@ class LightningG2Net(pl.LightningModule):
         return {'loss': loss, 'logits': logits}
     
     def validation_step(self, batch, batch_idx):
-        inputs, targets = batch
+        inputs, targets, filename = batch
         logits = self.forward(inputs)
         preds = torch.argmax(logits, dim=-1)
         loss = self.loss_fn(torch.squeeze(logits, dim=-1), targets, self.gamma)

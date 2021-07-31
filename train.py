@@ -7,7 +7,7 @@ from pytorch_lightning.callbacks import (
 )
 
 from dummy_dataloader import DummyModule
-from datamodule import DataModule
+from dataloader import make_dataloader
 from model import LightningG2Net
 
 from test import create_submission
@@ -56,8 +56,11 @@ trainer = pl.Trainer(
 )
 
 datamodule = DummyModule(config.dataloader)
+train_dataloader = make_dataloader(64)
+val_dataloader = make_dataloader(64)
 
 model = LightningG2Net(config.model, config.optimizer, config.scheduler)
-trainer.fit(model, datamodule=datamodule)
+# trainer.fit(model, datamodule=datamodule)
+trainer.fit(model, train_dataloader=train_dataloader, val_dataloaders=val_dataloader)
 
 # create_submission(trainer, datamodule)
