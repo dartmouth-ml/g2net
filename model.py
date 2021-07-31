@@ -63,15 +63,23 @@ class LightningG2Net(pl.LightningModule):
         loss = self.loss_fn(logits, targets)
 
         metrics = self.metrics(preds, targets)
-        self.log_dict({
-            'train/loss': loss,
-             **metrics,
-            })
+        metrics = {f'train/{k}':v for k,v in metrics.items()}
+
+        self.log('train/loss', loss)
+        self.log_dict(metrics, on_step=False, on_epoch=True)
+        
         return {'loss': loss, 'logits': logits}
     
     def validation_step(self, batch, batch_idx):
-        x, y = batch
-        logits = self.forward(x)
-        loss = self.loss_fn(y,logits,self.gamma)
-        self.log('val_loss', loss)
+        inputs, targets = batch
+        logits = self.forward(inputs)
+        preds = torch.argmax(logits, dim=-1)
+        loss = self.loss_fn(logits, targets, self.gamma)
+
+        metrics = self.metrics(preds, targets)
+        metrics = {f'val/{k}':v for k,v in metrics.items()}
+
+        self.log('val/loss', loss)
+        self.log_dict(metrics, on_step=False, on_epoch=True)
+
         return loss

@@ -1,6 +1,6 @@
 import torch
 
-def roc_star_loss( _y_true, y_pred, gamma, _epoch_true, epoch_pred):
+def roc_star_loss(y_pred, _y_true, _epoch_true, epoch_pred, gamma):
     """
     Nearly direct loss function for AUC.
     See article,
