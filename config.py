@@ -8,7 +8,7 @@ PROJECT_ROOT = Path(__file__).parent
 DATA_ROOT = PROJECT_ROOT.joinpath('data')
 
 config = ConfigDict()
-config.model_name = 'baseline'
+config.model_name = "baseline"
 config.version = get_datetime_version()
 config.seed = 10
 
@@ -40,13 +40,14 @@ config.logging.use_wandb = True
 config.logging.name = 'baseline'
 config.logging.project = 'g2net'
 config.logging.entity = 'dmlg'
+config.logging.tags = [config.version]
 
 config.trainer = ConfigDict()
-config.trainer.gpus = 1
-config.trainer.auto_select_gpus = True
+config.trainer.gpus = 0 #1
+config.trainer.auto_select_gpus = False #True
 config.trainer.min_epochs = 0
-config.trainer.max_epochs = 200,
-config.trainer.val_check_interval = 1000,
+config.trainer.max_epochs = 200
+config.trainer.val_check_interval = 1000
 config.trainer.resume_from_checkpoint = None
 config.trainer.fast_dev_run = False
 config.trainer.deterministic = False
@@ -65,5 +66,5 @@ config.checkpoint.every_n_steps = 1000
 config.early_stopping = ConfigDict()
 config.early_stopping.monitor = 'val/loss'
 config.early_stopping.stop_early = True
-config.early_stopping.min_delta = 0,
+config.early_stopping.min_delta = 0
 config.early_stopping.patience = 10
