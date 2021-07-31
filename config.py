@@ -25,12 +25,18 @@ dataloader_config = {
 
 model_config = {
     "resnet_pretrain": True,
+    "backbone": "resnet18",
 }
 
 policy_config = {
     "loss_fn": "ROC_Star",
     "optimizer": "Adam",
     "learning_rate": 1e-3,
+    
+    "scheduler_name": "steplr", # reduce lr after k iterations
+    "step_size": "50", # epochs until reduce lr
+    "gamma": 0.1, # scaling factor for gamma
+
 }
 
 logging_config = {
@@ -63,4 +69,10 @@ checkpoint_config = {
     "save_last": True,
     "save_top_k": 3,
     "every_n_train_steps": 100
+}
+
+early_stopping_config = {
+    "stop_early": True,
+    "min_delta": 0.0,
+    "patience": 10,
 }

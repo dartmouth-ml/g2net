@@ -1,9 +1,11 @@
 import pytorch_lightning as pl
 from pytorch_lightning.loggers import WandbLogger
-from pytorch_lightning.callbacks import ModelCheckpoint
+from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 
 from datamodule import DataModule
 from model import LightningG2Net
+
+from test import create_submission
 
 from config import (
     metadata_config,
@@ -13,6 +15,7 @@ from config import (
     policy_config,
     logging_config,
     checkpoint_config,
+    early_stopping_config
 )
 
 # Training 
@@ -33,6 +36,11 @@ if checkpoint_config["save_checkpoint"]:
                                      save_last=checkpoint_config["save_last"],
                                      save_top_k=checkpoint_config["save_top_k"],
                                      every_n_train_steps=checkpoint_config["every_n_train_steps"]))
+
+if early_stopping_config["stop_early"]:
+    callbacks.append(EarlyStopping(monitor="val_loss", 
+                                   min_delta=early_stopping_config["min_delta"], 
+                                   patience=early_stopping_config["patience"]))
 
 trainer = pl.Trainer(
     callbacks=callbacks,
@@ -58,4 +66,4 @@ datamodule.setup()
 model = LightningG2Net(model_config, policy_config)
 trainer.fit(model, datamodule=datamodule)
 
-#create_submission(trainer, datamodule, metadata_config)
+create_submission(trainer, datamodule)
