@@ -24,7 +24,7 @@ config.dataloader.num_workers = 0
 config.model = ConfigDict()
 config.model.pretrain = True
 config.model.backbone = "resnet18"
-config.model.loss_fn = 'BCELoss'
+config.model.loss_fn = 'CrossEntropy'
 
 config.optimizer = ConfigDict()
 config.optimizer.name = "Adam"
@@ -34,6 +34,7 @@ config.scheduler = ConfigDict()
 config.scheduler.name = "ReduceLROnPlateau"
 config.scheduler.step_size = 50
 config.scheduler.gamma = 0.1
+config.scheduler.monitor = 'val/loss'
 
 config.logging = ConfigDict()
 config.logging.use_wandb = True

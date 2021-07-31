@@ -57,7 +57,7 @@ trainer = pl.Trainer(
 
 datamodule = DummyModule(config.dataloader)
 
-model = LightningG2Net(config.model, config.policy)
+model = LightningG2Net(config.model, config.optimizer, config.scheduler)
 trainer.fit(model, datamodule=datamodule)
 
 # create_submission(trainer, datamodule)

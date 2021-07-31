@@ -25,7 +25,6 @@ from losses import ROCStarLoss
 class LightningG2Net(pl.LightningModule):
     def __init__(self,
                  model_config,
-                 policy_config,
                  optimizer_config,
                  scheduler_config):
         super(LightningG2Net, self).__init__()
@@ -34,7 +33,7 @@ class LightningG2Net(pl.LightningModule):
         self.resnet.fc = nn.Linear(512, 2)
 
         # hparams
-        self.lr = policy_config.lr
+        self.lr = optimizer_config.learning_rate
         self.optimizer = self.configure_optimizers(optimizer_config, scheduler_config)
         self.loss_fn = self.configure_loss_fn(model_config.loss_fn)
 
@@ -97,14 +96,14 @@ class LightningG2Net(pl.LightningModule):
         else:
             raise NotImplementedError(optimizer_name)
         
-        scheduler_dict = self.configure_lr_schedulers(scheduler_config)
+        scheduler_dict = self.configure_lr_schedulers(optimizer, scheduler_config)
 
         if scheduler_dict is None:
             return optimizer
         else:
             return {"optimizer": optimizer, 
                     "lr_scheduler": scheduler_dict}
-                    
+
     def forward(self, x):
         # resnet
         x = self.resnet(x)
