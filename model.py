@@ -102,7 +102,7 @@ class LightningG2Net(pl.LightningModule):
         else:
             return {"optimizer": optimizer, 
                     "lr_scheduler": scheduler_dict}
-                    
+
     def forward(self, x):
         # resnet
         x = self.resnet(x)
