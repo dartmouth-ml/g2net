@@ -134,7 +134,7 @@ class LightningG2Net(pl.LightningModule):
             self.loss_fn.epoch_true_acc[batch_idx] = targets
             self.loss_fn.epoch_pred_acc[batch_idx] = logits
         
-        return {'loss': loss, 'logits': logits}
+        return loss
     
     def validation_step(self, batch, batch_idx):
         inputs, targets, filename = batch

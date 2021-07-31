@@ -42,11 +42,10 @@ class SpectrogramDataset(Dataset):
         return len(self.file_names)
 
 
-# TODO we want separate training and validation dataloaders
 def make_dataloader(batch_size, val_ratio=0.2):
     # split train val
     data_path = Path(__file__).parent.joinpath('data')
-    labels_df = pd.read_csv(data_path.joinpath('abbreviated_labels.csv'))
+    labels_df = pd.read_csv(data_path.joinpath('training_labels.csv'))
 
     labels_x = labels_df.iloc[:, 0]
     labels_y = labels_df.iloc[:, 1]
@@ -69,16 +68,3 @@ def make_dataloader(batch_size, val_ratio=0.2):
         'train': DataLoader(dataset=train_dset, batch_size=batch_size, shuffle=True),
         'val': DataLoader(dataset=val_dset, batch_size=batch_size, shuffle=True)
     }                
-
-# A little bit of testing
-if __name__ == '__main__':
-    dset = SpectrogramDataset(Path.cwd().joinpath('data'))
-    for spectrogram, label, file_name in dset:
-        print(file_name)
-
-    spectrogram, label, file_name = dset.__getitem__(5)
-    print(label)
-    print(spectrogram)
-
-    # test_series = np.load('data/train/7/7/7/777a1e4add.npy')
-    # spectrogram = make_spectrogram(test_series)
