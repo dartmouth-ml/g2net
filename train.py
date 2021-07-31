@@ -55,7 +55,7 @@ trainer = pl.Trainer(
 datamodule = DataModule(dataloader_config)
 datamodule.setup()
 
-model = LightningG2Net(model_config, policy_config, datamodule.encoding_dicts, datamodule.prefix_to_idx)
+model = LightningG2Net(model_config, policy_config)
 
 trainer.fit(model, datamodule=datamodule)
 

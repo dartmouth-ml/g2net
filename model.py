@@ -10,14 +10,14 @@ from torchvision.models import resnet18
 from losses import roc_star_loss
 
 class LightningG2Net(pl.LightningModule):
-    def __init__(self, config):
+    def __init__(self, model_config, policy_config):
         super(LightningG2Net, self).__init__()
-        self.resnet = resnet18(pretrained=config['pretrained']) # remove last layer, fix first layer
+        self.resnet = resnet18(pretrained=model_config['pretrained']) # remove last layer, fix first layer
         self.output_layer = nn.Linear(1000, 2)
 
-        self.lr = config['lr']
-        self.optimizer_name = config['optimizer_name']
-        self.loss_fn = self.configure_loss_fn(config['loss_fn'])
+        self.lr = policy_config['lr']
+        self.optimizer_name = policy_config['optimizer']
+        self.loss_fn = self.configure_loss_fn(policy_config['loss_fn'])
     
     def configure_loss_fn(self, loss_fn):
         if loss_fn == 'CrossEntropy':

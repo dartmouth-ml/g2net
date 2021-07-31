@@ -28,8 +28,9 @@ model_config = {
 }
 
 policy_config = {
-    "loss_fn": "AUC",
+    "loss_fn": "ROC_Star",
     "optimizer": "Adam",
+    "learning_rate": 1e-3,
 }
 
 logging_config = {
