@@ -10,7 +10,13 @@ from torchmetrics import (
 import torch
 from torch import nn
 from torch.nn import functional as F
-from torchvision.models import resnet18, resnet34, resnet50, resnet101, googlenet
+from torchvision.models import (
+    resnet18,
+    resnet34,
+    resnet50,
+    resnet101,
+    googlenet
+)
 
 from losses import ROCStarLoss
 
@@ -63,7 +69,7 @@ class LightningG2Net(pl.LightningModule):
 
     def configure_scheduler(self, step_size, gamma):
         if self.scheduler_name == 'steplr':
-            return torch.optim.lr_scheduler.StepLR(self.optimizer, step_size,gamma)
+            return torch.optim.lr_scheduler.StepLR(self.optimizer, step_size, gamma)
         else:
             raise NotImplementedError(self.scheduler_name)
 
