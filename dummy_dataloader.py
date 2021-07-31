@@ -23,7 +23,7 @@ class RandomDataset(Dataset):
         self.data = [torch.randn(size) for _ in range(num_samples)]
 
     def __getitem__(self, index):
-        return self.data[index]
+        return self.data[index], 0
 
     def __len__(self):
         return self.len
@@ -37,7 +37,7 @@ class DummyModule(LightningDataModule):
         super().__init__()
     
     def train_dataloader(self):
-        return DataLoader(RandomDataset(sizse=(3, 128, 128), num_samples=64), batch_size=64, shuffle=True)
+        return DataLoader(RandomDataset(size=(3, 128, 128), num_samples=64), batch_size=64, shuffle=True)
     
     def val_dataloader(self):
         return DataLoader(RandomDataset(size=(3, 128, 128), num_samples=64), batch_size=64, shuffle=True)

@@ -25,18 +25,18 @@ from losses import ROCStarLoss
 class LightningG2Net(pl.LightningModule):
     def __init__(self,
                  model_config,
-                 policy_config,
                  optimizer_config,
                  scheduler_config):
         super(LightningG2Net, self).__init__()
 
         self.resnet = self.configure_backbone(model_config.backbone, model_config.pretrain)
-        self.resnet.fc = nn.Linear(512, 2)
+        self.resnet.fc = nn.Linear(512, 1)
 
         # hparams
-        self.lr = policy_config.lr
-        self.optimizer = self.configure_optimizers(optimizer_config, scheduler_config)
-        self.loss_fn = self.configure_loss_fn(model_config.loss_fn)
+        self.optimizer_config = optimizer_config
+        self.scheduler_config = scheduler_config
+        self.model_config = model_config
+        self.loss_fn = self.configure_loss_fn()
 
         # metrics
         self.metrics = MetricCollection([
@@ -62,15 +62,15 @@ class LightningG2Net(pl.LightningModule):
         else:
             raise NotImplementedError(backbone)
 
-    def configure_loss_fn(self, loss_fn):
-        if loss_fn == 'CrossEntropy':
-            return nn.BCELoss(weight=None)
+    def configure_loss_fn(self):
+        if self.model_config.loss_fn == 'BCELoss':
+            return nn.BCEWithLogitsLoss(weight=None)
         
-        elif loss_fn == 'ROC_Star':
+        elif self.model_config.loss_fn == 'ROC_Star':
             return ROCStarLoss()
         
         else:
-            raise NotImplementedError(loss_fn)
+            raise NotImplementedError(self.model_config.loss_fn )
 
     def configure_lr_schedulers(self, optimizer, scheduler_config):
         if scheduler_config is None:
@@ -89,15 +89,13 @@ class LightningG2Net(pl.LightningModule):
         
         return {'scheduler': scheduler, 'monitor': scheduler_config.monitor}
 
-    def configure_optimizers(self, optimizer_config, scheduler_config):
-        optimizer_name = optimizer_config.name
-
-        if optimizer_name == 'Adam':
-            optimizer = torch.optim.Adam(self.parameters(), self.lr)
+    def configure_optimizers(self):
+        if self.optimizer_config.name == 'Adam':
+            optimizer = torch.optim.Adam(self.parameters(), self.optimizer_config.learning_rate)
         else:
-            raise NotImplementedError(optimizer_name)
+            raise NotImplementedError(self.optimizer_config.name)
         
-        scheduler_dict = self.configure_lr_schedulers(scheduler_config)
+        scheduler_dict = self.configure_lr_schedulers(optimizer, self.scheduler_config)
 
         if scheduler_dict is None:
             return optimizer
@@ -112,18 +110,18 @@ class LightningG2Net(pl.LightningModule):
         return x
     
     def on_train_start(self):
-        if self.loss_fn_name == 'ROC_Star':
+        if self.model_config.loss_fn == 'ROC_Star':
             for batch_idx, batch in enumerate(self.train_dataloader()):
                 _, targets = batch
                 self.loss_fn.epoch_true_acc[batch_idx] = targets
         
-        self.loss_fn.on_epoch_end()
+            self.loss_fn.on_epoch_end()
 
     def training_step(self, batch, batch_idx):
         inputs, targets = batch
         logits = self.forward(inputs)
         preds = torch.argmax(logits, dim=-1)
-        loss = self.loss_fn(logits, targets)
+        loss = self.loss_fn(torch.squeeze(logits, dim=-1), targets)
 
         metrics = self.metrics(preds, targets)
         metrics = {f'train/{k}':v for k,v in metrics.items()}
@@ -131,7 +129,7 @@ class LightningG2Net(pl.LightningModule):
         self.log('train/loss', loss)
         self.log_dict(metrics, on_step=False, on_epoch=True)
 
-        if self.loss_fn_name == 'ROC_Star':
+        if self.model_config.loss_fn == 'ROC_Star':
             self.loss_fn.epoch_true_acc[batch_idx] = targets
             self.loss_fn.epoch_pred_acc[batch_idx] = logits
         
@@ -141,7 +139,7 @@ class LightningG2Net(pl.LightningModule):
         inputs, targets = batch
         logits = self.forward(inputs)
         preds = torch.argmax(logits, dim=-1)
-        loss = self.loss_fn(logits, targets, self.gamma)
+        loss = self.loss_fn(torch.squeeze(logits, dim=-1), targets, self.gamma)
 
         metrics = self.metrics(preds, targets)
         metrics = {f'val/{k}':v for k,v in metrics.items()}
@@ -152,7 +150,7 @@ class LightningG2Net(pl.LightningModule):
         return loss
     
     def on_train_epoch_end(self):
-        if self.loss_fn_name == "ROC_Star":
+        if self.model_config.loss_fn == "ROC_Star":
             self.loss_fn.on_epoch_end()
     
     
