@@ -2,12 +2,14 @@ from torch.utils.data import Dataset, DataLoader
 import pandas as pd
 import numpy as np
 from pathlib import Path
-from torchvision.transforms import ToTensor
+from torchvision import transforms
+from torchvision.transforms import ToTensor, Compose
 from spectrogram import make_spectrogram
+import einops
 
 class SpectrogramDataset(Dataset):
     # data_path is a Path object
-    def __init__(self, data_path):
+    def __init__(self, data_path, transforms=None):
         super().__init__()
 
         labels_df = pd.read_csv(data_path.joinpath('abbreviated_labels.csv'))
@@ -15,7 +17,7 @@ class SpectrogramDataset(Dataset):
         self.time_series_path = data_path.joinpath('train')
         self.file_names = labels_df['id'].tolist()
         self.labels = np.array(labels_df['target'].tolist())
-
+        self.transforms = transforms
         self.file_ext = '.npy'
 
     def __getitem__(self, idx):
@@ -27,8 +29,9 @@ class SpectrogramDataset(Dataset):
         full_path = self.convert_to_full_path(file_name)
         time_series_data = np.load(full_path).astype(np.float32)
         spectrogram = make_spectrogram(time_series_data)
-
+        spectrogram = einops.rearrange(spectrogram, 't c f -> c f t')
         label = self.labels[idx]
+        spectrogram = self.transforms(spectrogram)
 
         return spectrogram, label, file_name
 
@@ -45,8 +48,8 @@ class SpectrogramDataset(Dataset):
 # TODO we want separate training and validation dataloaders
 def make_dataloader(batch_size):
     data_path = Path.cwd().joinpath('data')
-    dset = SpectrogramDataset(data_path)
-
+    transforms = Compose([ToTensor()])
+    dset = SpectrogramDataset(data_path, transforms=transforms)
     return DataLoader(dataset=dset,
                       batch_size=batch_size,
                       shuffle=True)
