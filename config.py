@@ -1,80 +1,69 @@
 from pathlib import Path
+
+from wandb import Config
 from utils import get_datetime_version
+from ml_collections import ConfigDict
 
 PROJECT_ROOT = Path(__file__).parent
 DATA_ROOT = PROJECT_ROOT.joinpath('data')
 
-# config
-metadata_config = {
-    "model_name": "baseline",
-    "version": get_datetime_version()
-}
+config = ConfigDict()
+config.model_name = 'baseline'
+config.version = get_datetime_version()
+config.seed = 10
 
-dataloader_config = {
-    # Set path variables for convenience
-    "data_path": DATA_ROOT.joinpath("train"),
-    "labels_path": DATA_ROOT.joinpath("training_labels.csv"),
-    "test_data_path": DATA_ROOT.joinpath("test"),
-    "test_labels_path": DATA_ROOT.joinpath("sample_submission.csv"),
+config.dataloader = ConfigDict()
+config.dataloader.data_path = DATA_ROOT.joinpath("train")
+config.dataloader.labels_path = DATA_ROOT.joinpath("training_labels.csv")
+config.dataloader.test_data_path = DATA_ROOT.joinpath("test")
+config.dataloader.test_labels_path = DATA_ROOT.joinpath("sample_submission.csv")
+config.dataloader.val_ratio = 0.2
+config.dataloader.batch_size = 64
+config.dataloader.num_workers = 0
 
-    "seed": 10,
-    "val_ratio": 0.2,
-    "batch_size": 64,
-    "num_workers": 0,
-}
+config.model = ConfigDict()
+config.model.pretrain = True
+config.model.backbone = "resnet18"
+config.model.loss_fn = 'BCELoss'
 
-model_config = {
-    "resnet_pretrain": True,
-    "backbone": "resnet18",
-}
+config.optimizer = ConfigDict()
+config.optimizer.name = "Adam"
+config.optimizer.learning_rate = 1e-3
 
-policy_config = {
-    "lr": .01,
-    "loss_fn": "CrossEntropy",
-    "optimizer": "Adam",
-    "learning_rate": 1e-3,
-    
-    "lr_scheduler": "ReduceLROnPlateau", # reduce lr after k iterations
-    "step_size": "50", # epochs until reduce lr
-    "gamma": 0.1, # scaling factor for gamma
+config.scheduler = ConfigDict()
+config.scheduler.name = "ReduceLROnPlateau"
+config.scheduler.step_size = 50
+config.scheduler.gamma = 0.1
 
-}
+config.logging = ConfigDict()
+config.logging.use_wandb = True
+config.logging.name = 'baseline'
+config.logging.project = 'g2net'
+config.logging.entity = 'dmlg'
 
-logging_config = {
-    "use_wandb": True,
-    "name": "baseline",
-    "tags": [metadata_config["version"]],
-    "project": "g2net",
-    "entity": "dmlg"
-}
+config.trainer = ConfigDict()
+config.trainer.gpus = 1
+config.trainer.auto_select_gpus = True
+config.trainer.min_epochs = 0
+config.trainer.max_epochs = 200,
+config.trainer.val_check_interval = 1000,
+config.trainer.resume_from_checkpoint = None
+config.trainer.fast_dev_run = False
+config.trainer.deterministic = False
 
-trainer_config = {
-    "gpus": 0,
-    "auto_select_gpus": False,
+config.checkpoint = ConfigDict()
+config.checkpoint.save_checkpoint = True
+config.checkpoint.save_dir = PROJECT_ROOT.joinpath('checkpoints',
+                                                   config.model_name,
+                                                   config.version)
+config.checkpoint.monitor = 'val/loss'
+config.checkpoint.monitor_mode = 'min'
+config.checkpoint.save_last = True
+config.checkpoint.save_top_k = 3
+config.checkpoint.every_n_steps = 1000
 
-    "min_epochs": 0,
-    "max_epochs": 200,
-    "val_check_interval": 1000,
-
-    "resume_from_checkpoint": None,
-    "fast_dev_run": False,
-    "deterministic": False
-}
-
-checkpoint_config = {
-    "save_checkpoint": True,
-    "save_dir": PROJECT_ROOT.joinpath("checkpoints",
-                                        metadata_config["model_name"],
-                                        metadata_config["version"]),
-    "monitor": "val/loss",
-    "mode": "min",
-    "save_last": True,
-    "save_top_k": 3,
-    "every_n_train_steps": 100
-}
-
-early_stopping_config = {
-    "stop_early": True,
-    "min_delta": 0.0,
-    "patience": 10,
-}
+config.early_stopping = ConfigDict()
+config.early_stopping.monitor = 'val/loss'
+config.early_stopping.stop_early = True
+config.early_stopping.min_delta = 0,
+config.early_stopping.patience = 10
