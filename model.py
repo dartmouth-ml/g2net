@@ -12,7 +12,7 @@ from torch import nn
 from torch.nn import functional as F
 from torchvision.models import resnet18
 
-from losses import roc_star_loss
+from losses import ROCStarLoss
 
 class LightningG2Net(pl.LightningModule):
     def __init__(self, model_config, policy_config):
@@ -23,7 +23,8 @@ class LightningG2Net(pl.LightningModule):
         # hparams
         self.lr = policy_config['lr']
         self.optimizer_name = policy_config['optimizer']
-        self.loss_fn = self.configure_loss_fn(policy_config['loss_fn'])
+        self.loss_fn_name = policy_config['loss_fn']
+        self.loss_fn = self.configure_loss_fn(self.loss_fn_name)
 
         # metrics
         self.metrics = MetricCollection([
@@ -31,13 +32,16 @@ class LightningG2Net(pl.LightningModule):
             F1(num_classes=2, threshold=0.5),
             AUROC(num_classes=2),
         ])
+
+        # aux metrics that we keep track of
+        self.prev_epoch_trues = torch.Tensor()
     
     def configure_loss_fn(self, loss_fn):
         if loss_fn == 'CrossEntropy':
-            return F.binary_cross_entropy_with_logits
+            return nn.BCELoss(weight=None)
         
         elif loss_fn == 'ROC_Star':
-            return roc_star_loss
+            return ROCStarLoss()
         
         else:
             raise NotImplementedError(loss_fn)
@@ -67,6 +71,10 @@ class LightningG2Net(pl.LightningModule):
 
         self.log('train/loss', loss)
         self.log_dict(metrics, on_step=False, on_epoch=True)
+
+        if self.loss_fn_name == 'ROC_Star':
+            self.loss_fn.epoch_true[batch_idx] = targets
+            self.loss_fn.epoch_pred[batch_idx] = logits
         
         return {'loss': loss, 'logits': logits}
     
@@ -83,3 +91,9 @@ class LightningG2Net(pl.LightningModule):
         self.log_dict(metrics, on_step=False, on_epoch=True)
 
         return loss
+    
+    def on_train_epoch_end(self):
+        if self.loss_fn_name == "ROC_Star":
+            self.loss_fn.on_epoch_end()
+    
+    
