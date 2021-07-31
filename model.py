@@ -12,7 +12,7 @@ from torch import nn
 from torch.nn import functional as F
 from torchvision.models import resnet18, resnet34, resnet50, resnet101, googlenet
 
-from losses import roc_star_loss
+from losses import ROCStarLoss
 
 class LightningG2Net(pl.LightningModule):
     def __init__(self, model_config, policy_config):
@@ -33,6 +33,9 @@ class LightningG2Net(pl.LightningModule):
             F1(num_classes=2, threshold=0.5),
             AUROC(num_classes=2),
         ])
+
+        # aux metrics that we keep track of
+        self.prev_epoch_trues = torch.Tensor()
     
     def configure_backbone(self, backbone, pretrained):
         if backbone == 'resnet18':
@@ -50,10 +53,10 @@ class LightningG2Net(pl.LightningModule):
 
     def configure_loss_fn(self, loss_fn):
         if loss_fn == 'CrossEntropy':
-            return F.binary_cross_entropy_with_logits
+            return nn.BCELoss(weight=None)
         
         elif loss_fn == 'ROC_Star':
-            return roc_star_loss
+            return ROCStarLoss()
         
         else:
             raise NotImplementedError(loss_fn)
@@ -77,6 +80,14 @@ class LightningG2Net(pl.LightningModule):
         
         return x
     
+    def on_train_start(self):
+        if self.loss_fn_name == 'ROC_Star':
+            for batch_idx, batch in enumerate(self.train_dataloader()):
+                _, targets = batch
+                self.loss_fn.epoch_true_acc[batch_idx] = targets
+        
+        self.loss_fn.on_epoch_end()
+
     def training_step(self, batch, batch_idx):
         inputs, targets = batch
         logits = self.forward(inputs)
@@ -84,15 +95,33 @@ class LightningG2Net(pl.LightningModule):
         loss = self.loss_fn(logits, targets)
 
         metrics = self.metrics(preds, targets)
-        self.log_dict({
-            'train/loss': loss,
-             **metrics,
-            })
+        metrics = {f'train/{k}':v for k,v in metrics.items()}
+
+        self.log('train/loss', loss)
+        self.log_dict(metrics, on_step=False, on_epoch=True)
+
+        if self.loss_fn_name == 'ROC_Star':
+            self.loss_fn.epoch_true_acc[batch_idx] = targets
+            self.loss_fn.epoch_pred_acc[batch_idx] = logits
+        
         return {'loss': loss, 'logits': logits}
     
     def validation_step(self, batch, batch_idx):
-        x, y = batch
-        logits = self.forward(x)
-        loss = self.loss_fn(y,logits,self.gamma)
-        self.log('val_loss', loss)
+        inputs, targets = batch
+        logits = self.forward(inputs)
+        preds = torch.argmax(logits, dim=-1)
+        loss = self.loss_fn(logits, targets, self.gamma)
+
+        metrics = self.metrics(preds, targets)
+        metrics = {f'val/{k}':v for k,v in metrics.items()}
+
+        self.log('val/loss', loss)
+        self.log_dict(metrics, on_step=False, on_epoch=True)
+
         return loss
+    
+    def on_train_epoch_end(self):
+        if self.loss_fn_name == "ROC_Star":
+            self.loss_fn.on_epoch_end()
+    
+    

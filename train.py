@@ -1,6 +1,10 @@
 import pytorch_lightning as pl
 from pytorch_lightning.loggers import WandbLogger
-from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
+from pytorch_lightning.callbacks import (
+    ModelCheckpoint,
+    LearningRateMonitor,
+    EarlyStopping
+)
 
 from datamodule import DataModule
 from model import LightningG2Net
@@ -27,7 +31,7 @@ if logging_config["use_wandb"]:
 else:
     logger = []
 
-callbacks = []
+callbacks = [LearningRateMonitor()]
 
 if checkpoint_config["save_checkpoint"]:
     callbacks.append(ModelCheckpoint(dirpath=checkpoint_config["save_dir"],
