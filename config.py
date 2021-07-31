@@ -32,6 +32,7 @@ config.optimizer.learning_rate = 1e-3
 
 config.scheduler = ConfigDict()
 config.scheduler.name = "ReduceLROnPlateau"
+config.scheduler.monitor = 'val/loss'
 config.scheduler.step_size = 50
 config.scheduler.gamma = 0.1
 config.scheduler.monitor = 'val/loss'
