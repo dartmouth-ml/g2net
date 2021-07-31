@@ -33,7 +33,7 @@ policy_config = {
     "optimizer": "Adam",
     "learning_rate": 1e-3,
     
-    "scheduler_name": "steplr", # reduce lr after k iterations
+    "scheduler_name": "ReduceLROnPlateau", # reduce lr after k iterations
     "step_size": "50", # epochs until reduce lr
     "gamma": 0.1, # scaling factor for gamma
 
