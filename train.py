@@ -51,16 +51,15 @@ trainer = pl.Trainer(
 
     resume_from_checkpoint=config.trainer.resume_from_checkpoint,
     # fast_dev_run=config.trainer.fast_dev_run,
-    fast_dev_run=True,
+    fast_dev_run=False,
     deterministic=config.trainer.deterministic,
 )
 
 datamodule = DummyModule(config.dataloader)
-train_dataloader = make_dataloader(64)
-val_dataloader = make_dataloader(64)
+dataloaders = make_dataloader(64)
 
 model = LightningG2Net(config.model, config.optimizer, config.scheduler)
 # trainer.fit(model, datamodule=datamodule)
-trainer.fit(model, train_dataloader=train_dataloader, val_dataloaders=val_dataloader)
+trainer.fit(model, train_dataloader=dataloaders['train'], val_dataloaders=dataloaders['val'])
 
 # create_submission(trainer, datamodule)

@@ -2,18 +2,15 @@ from torch.utils.data import Dataset, DataLoader
 import pandas as pd
 import numpy as np
 from pathlib import Path
-from torchvision import transforms
 from torchvision.transforms import ToTensor, Compose
 from spectrogram import make_spectrogram
 import einops
+from sklearn.model_selection import train_test_split
 
 class SpectrogramDataset(Dataset):
     # data_path is a Path object
-    def __init__(self, data_path, transforms=None):
+    def __init__(self, data_path, labels_df, transforms=None):
         super().__init__()
-
-        labels_df = pd.read_csv(data_path.joinpath('abbreviated_labels.csv'))
-
         self.time_series_path = data_path.joinpath('train')
         self.file_names = labels_df['id'].tolist()
         self.labels = np.array(labels_df['target'].tolist())
@@ -46,14 +43,32 @@ class SpectrogramDataset(Dataset):
 
 
 # TODO we want separate training and validation dataloaders
-def make_dataloader(batch_size):
-    data_path = Path.cwd().joinpath('data')
-    transforms = Compose([ToTensor()])
-    dset = SpectrogramDataset(data_path, transforms=transforms)
-    return DataLoader(dataset=dset,
-                      batch_size=batch_size,
-                      shuffle=True)
+def make_dataloader(batch_size, val_ratio=0.2):
+    # split train val
+    data_path = Path(__file__).parent.joinpath('data')
+    labels_df = pd.read_csv(data_path.joinpath('abbreviated_labels.csv'))
 
+    labels_x = labels_df.iloc[:, 0]
+    labels_y = labels_df.iloc[:, 1]
+    m = labels_df.shape[0]
+    filenames_train, filenames_val, labels_train, labels_val = train_test_split(labels_x, 
+                                                                                labels_y,
+                                                                                train_size=int(m - (m * val_ratio)),
+                                                                                shuffle=True)
+    
+    transforms = Compose([ToTensor()])
+    train_dset = SpectrogramDataset(data_path,
+                                    labels_df=pd.concat([filenames_train, labels_train], axis=1),
+                                    transforms=transforms)
+
+    val_dset = SpectrogramDataset(data_path,
+                                  labels_df=pd.concat([filenames_val, labels_val], axis=1),
+                                  transforms=transforms)
+
+    return {
+        'train': DataLoader(dataset=train_dset, batch_size=batch_size, shuffle=True),
+        'val': DataLoader(dataset=val_dset, batch_size=batch_size, shuffle=True)
+    }                
 
 # A little bit of testing
 if __name__ == '__main__':
