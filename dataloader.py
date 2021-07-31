@@ -1,6 +1,6 @@
 from torch.utils.data import Dataset, DataLoader
 import numpy as np
-from librosa import power_to_db
+from librosa.core.spectrum import power_to_db
 from librosa.feature import melspectrogram
 from nnAudio.Spectrogram import CQT1992v2
 
