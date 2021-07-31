@@ -1,10 +1,15 @@
 # model
 import pytorch_lightning as pl
+from torchmetrics import (
+    MetricCollection,
+    Accuracy,
+    AUROC,
+    F1,
+)
 
 import torch
 from torch import nn
 from torch.nn import functional as F
-from torchvision import datasets, transforms
 from torchvision.models import resnet18
 
 from losses import roc_star_loss
@@ -15,13 +20,21 @@ class LightningG2Net(pl.LightningModule):
         self.resnet = resnet18(pretrained=model_config['pretrained']) # remove last layer, fix first layer
         self.output_layer = nn.Linear(1000, 2)
 
+        # hparams
         self.lr = policy_config['lr']
         self.optimizer_name = policy_config['optimizer']
         self.loss_fn = self.configure_loss_fn(policy_config['loss_fn'])
+
+        # metrics
+        self.metrics = MetricCollection([
+            Accuracy(num_classes=2, threshold=0.5),
+            F1(num_classes=2, threshold=0.5),
+            AUROC(num_classes=2),
+        ])
     
     def configure_loss_fn(self, loss_fn):
         if loss_fn == 'CrossEntropy':
-            return F.binary_cross_entropy
+            return F.binary_cross_entropy_with_logits
         
         elif loss_fn == 'ROC_Star':
             return roc_star_loss
@@ -34,8 +47,6 @@ class LightningG2Net(pl.LightningModule):
         x = self.resnet(x)
         x = self.output_layer(x)
         
-        # probability distribution over labels
-        x = torch.log_softmax(x, dim=1)
         return x
 
     def configure_optimizers(self):
@@ -46,11 +57,17 @@ class LightningG2Net(pl.LightningModule):
             raise NotImplementedError(self.optimizer_name)
     
     def training_step(self, batch, batch_idx):
-        x, y = batch
-        logits = self.forward(x)
-        loss = self.loss_fn(logits, y)
-        self.log('train_loss', loss)
-        return loss
+        inputs, targets = batch
+        logits = self.forward(inputs)
+        preds = torch.argmax(logits, dim=-1)
+        loss = self.loss_fn(logits, targets)
+
+        metrics = self.metrics(preds, targets)
+        self.log_dict({
+            'train/loss': loss,
+             **metrics,
+            })
+        return {'loss': loss, 'logits': logits}
     
     def validation_step(self, batch, batch_idx):
         x, y = batch
