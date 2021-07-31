@@ -50,8 +50,7 @@ trainer = pl.Trainer(
     num_sanity_val_steps=0,
 
     resume_from_checkpoint=config.trainer.resume_from_checkpoint,
-    # fast_dev_run=config.trainer.fast_dev_run,
-    fast_dev_run=False,
+    fast_dev_run=config.trainer.fast_dev_run,
     deterministic=config.trainer.deterministic,
 )
 
