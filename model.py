@@ -9,21 +9,34 @@ from torchmetrics import (
 
 import torch
 from torch import nn
-from torch.nn import functional as F
-from torchvision.models import resnet18
-
-from losses import roc_star_loss
+from torchvision.models import (
+    resnet18,
+    resnet34,
+    resnet50,
+    resnet101,
+    googlenet
+)
+from torch.optim.lr_scheduler import (
+    ReduceLROnPlateau,
+    StepLR
+)
+from losses import ROCStarLoss
 
 class LightningG2Net(pl.LightningModule):
-    def __init__(self, model_config, policy_config):
+    def __init__(self,
+                 model_config,
+                 policy_config,
+                 optimizer_config,
+                 scheduler_config):
         super(LightningG2Net, self).__init__()
-        self.resnet = resnet18(pretrained=model_config['pretrained']) # remove last layer, fix first layer
-        self.output_layer = nn.Linear(1000, 2)
+
+        self.resnet = self.configure_backbone(model_config.backbone, model_config.pretrain)
+        self.resnet.fc = nn.Linear(512, 2)
 
         # hparams
-        self.lr = policy_config['lr']
-        self.optimizer_name = policy_config['optimizer']
-        self.loss_fn = self.configure_loss_fn(policy_config['loss_fn'])
+        self.lr = policy_config.lr
+        self.optimizer = self.configure_optimizers(optimizer_config, scheduler_config)
+        self.loss_fn = self.configure_loss_fn(model_config.loss_fn)
 
         # metrics
         self.metrics = MetricCollection([
@@ -31,31 +44,81 @@ class LightningG2Net(pl.LightningModule):
             F1(num_classes=2, threshold=0.5),
             AUROC(num_classes=2),
         ])
+
+        # aux metrics that we keep track of
+        self.prev_epoch_trues = torch.Tensor()
     
+    def configure_backbone(self, backbone, pretrained):
+        if backbone == 'resnet18':
+            return resnet18(pretrained=pretrained) # remove last layer, fix first layer
+        elif backbone == 'resnet34':
+            return resnet34(pretrained=pretrained) # remove last layer, fix first layer
+        elif backbone == 'resnet50':
+            return resnet50(pretrained=pretrained) # remove last layer, fix first layer     
+        elif backbone == 'resnet101':
+            return resnet101(pretrained=pretrained)
+        elif backbone == 'googlenet':
+            return googlenet(pretrained=pretrained)
+        else:
+            raise NotImplementedError(backbone)
+
     def configure_loss_fn(self, loss_fn):
         if loss_fn == 'CrossEntropy':
-            return F.binary_cross_entropy_with_logits
+            return nn.BCELoss(weight=None)
         
         elif loss_fn == 'ROC_Star':
-            return roc_star_loss
+            return ROCStarLoss()
         
         else:
             raise NotImplementedError(loss_fn)
 
+    def configure_lr_schedulers(self, optimizer, scheduler_config):
+        if scheduler_config is None:
+            return None
+        
+        if scheduler_config.name == 'ReduceLROnPlateau':
+            scheduler = ReduceLROnPlateau(optimizer)
+        
+        elif scheduler_config.name == 'StepLR':
+            scheduler = StepLR(optimizer, 
+                               scheduler_config.step_size,
+                               scheduler_config.gamma)
+
+        elif scheduler_config is not None:
+            raise NotImplementedError(scheduler_config.name)
+        
+        return {'scheduler': scheduler, 'monitor': scheduler_config.monitor}
+
+    def configure_optimizers(self, optimizer_config, scheduler_config):
+        optimizer_name = optimizer_config.name
+
+        if optimizer_name == 'Adam':
+            optimizer = torch.optim.Adam(self.parameters(), self.lr)
+        else:
+            raise NotImplementedError(optimizer_name)
+        
+        scheduler_dict = self.configure_lr_schedulers(scheduler_config)
+
+        if scheduler_dict is None:
+            return optimizer
+        else:
+            return {"optimizer": optimizer, 
+                    "lr_scheduler": scheduler_dict}
+                    
     def forward(self, x):
         # resnet
         x = self.resnet(x)
-        x = self.output_layer(x)
         
         return x
-
-    def configure_optimizers(self):
-        if self.optimizer_name == 'Adam':
-            return torch.optim.Adam(self.parameters(), self.lr)
-
-        else:
-            raise NotImplementedError(self.optimizer_name)
     
+    def on_train_start(self):
+        if self.loss_fn_name == 'ROC_Star':
+            for batch_idx, batch in enumerate(self.train_dataloader()):
+                _, targets = batch
+                self.loss_fn.epoch_true_acc[batch_idx] = targets
+        
+        self.loss_fn.on_epoch_end()
+
     def training_step(self, batch, batch_idx):
         inputs, targets = batch
         logits = self.forward(inputs)
@@ -67,6 +130,10 @@ class LightningG2Net(pl.LightningModule):
 
         self.log('train/loss', loss)
         self.log_dict(metrics, on_step=False, on_epoch=True)
+
+        if self.loss_fn_name == 'ROC_Star':
+            self.loss_fn.epoch_true_acc[batch_idx] = targets
+            self.loss_fn.epoch_pred_acc[batch_idx] = logits
         
         return {'loss': loss, 'logits': logits}
     
@@ -83,3 +150,9 @@ class LightningG2Net(pl.LightningModule):
         self.log_dict(metrics, on_step=False, on_epoch=True)
 
         return loss
+    
+    def on_train_epoch_end(self):
+        if self.loss_fn_name == "ROC_Star":
+            self.loss_fn.on_epoch_end()
+    
+    
