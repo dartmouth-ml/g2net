@@ -9,7 +9,6 @@ from torchmetrics import (
 
 import torch
 from torch import nn
-from torch.nn import functional as F
 from torchvision.models import (
     resnet18,
     resnet34,
@@ -17,21 +16,27 @@ from torchvision.models import (
     resnet101,
     googlenet
 )
-
+from torch.optim.lr_scheduler import (
+    ReduceLROnPlateau,
+    StepLR
+)
 from losses import ROCStarLoss
 
 class LightningG2Net(pl.LightningModule):
-    def __init__(self, model_config, policy_config):
+    def __init__(self,
+                 model_config,
+                 policy_config,
+                 optimizer_config,
+                 scheduler_config):
         super(LightningG2Net, self).__init__()
 
-        self.resnet = self.configure_backbone(model_config['backbone'], model_config['resnet_pretrain'])
+        self.resnet = self.configure_backbone(model_config.backbone, model_config.pretrain)
         self.output_layer = nn.Linear(1000, 2)
 
         # hparams
-        self.lr = policy_config['lr']
-        self.optimizer = self.configure_optimizer(policy_config['optimizer'])
-        self.loss_fn = self.configure_loss_fn(policy_config['loss_fn'])
-        self.scheduler = self.configure_scheduler(policy_config['step_size'], policy_config['gamma'])
+        self.lr = policy_config.lr
+        self.optimizer = self.configure_optimizers(optimizer_config, scheduler_config)
+        self.loss_fn = self.configure_loss_fn(model_config.loss_fn)
 
         # metrics
         self.metrics = MetricCollection([
@@ -67,17 +72,38 @@ class LightningG2Net(pl.LightningModule):
         else:
             raise NotImplementedError(loss_fn)
 
-    def configure_scheduler(self, step_size, gamma):
-        if self.scheduler_name == 'steplr':
-            return torch.optim.lr_scheduler.StepLR(self.optimizer, step_size, gamma)
-        else:
-            raise NotImplementedError(self.scheduler_name)
+    def configure_lr_schedulers(self, optimizer, scheduler_config):
+        if scheduler_config is None:
+            return None
+        
+        if scheduler_config.name == 'ReduceLROnPlateau':
+            scheduler = ReduceLROnPlateau(optimizer)
+        
+        elif scheduler_config.name == 'StepLR':
+            scheduler = StepLR(optimizer, 
+                               scheduler_config.step_size,
+                               scheduler_config.gamma)
 
-    def configure_optimizers(self, optimizer_name):
+        elif scheduler_config is not None:
+            raise NotImplementedError(scheduler_config.name)
+        
+        return {'scheduler': scheduler, 'monitor': scheduler_config.monitor}
+
+    def configure_optimizers(self, optimizer_config, scheduler_config):
+        optimizer_name = optimizer_config.name
+
         if optimizer_name == 'Adam':
-            return torch.optim.Adam(self.parameters(), self.lr)
+            optimizer = torch.optim.Adam(self.parameters(), self.lr)
         else:
             raise NotImplementedError(optimizer_name)
+        
+        scheduler_dict = self.configure_lr_schedulers(scheduler_config)
+
+        if scheduler_dict is None:
+            return optimizer
+        else:
+            return {"optimizer": optimizer, 
+                    "lr_scheduler": scheduler_dict}
     
     def forward(self, x):
         # resnet

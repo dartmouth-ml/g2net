@@ -1,4 +1,6 @@
 from pathlib import Path
+
+from wandb import Config
 from utils import get_datetime_version
 from ml_collections import ConfigDict
 
@@ -22,13 +24,16 @@ config.dataloader.num_workers = 0
 config.model = ConfigDict()
 config.model.pretrain = True
 config.model.backbone = "resnet18"
+config.model.loss_fn = 'BCELoss'
 
-config.policy = ConfigDict()
-config.policy.loss_fn = 'BCELoss'
-config.policy.optimizer = "Adam"
-config.policy.learning_rate = 1e-3
-config.policy.scheduler = 'StepLR'
-config.policy.scheduler_params = {'step_size': 50, 'gamma': 0.1}
+config.optimizer = ConfigDict()
+config.optimizer.name = "Adam"
+config.optimizer.learning_rate = 1e-3
+
+config.scheduler = ConfigDict()
+config.scheduler.name = "ReduceLROnPlateau"
+config.scheduler.step_size = 50
+config.scheduler.gamma = 0.1
 
 config.logging = ConfigDict()
 config.logging.use_wandb = True
