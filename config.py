@@ -44,11 +44,11 @@ config.logging.entity = 'dmlg'
 config.logging.tags = [config.version]
 
 config.trainer = ConfigDict()
-config.trainer.gpus = 1 #1
-config.trainer.auto_select_gpus = True #True
+config.trainer.gpus = 0 #1
+config.trainer.auto_select_gpus = False #True
 config.trainer.min_epochs = 0
 config.trainer.max_epochs = 200
-config.trainer.val_check_interval = 1000
+config.trainer.val_check_interval = 1
 config.trainer.resume_from_checkpoint = None
 config.trainer.fast_dev_run = False
 config.trainer.deterministic = False
