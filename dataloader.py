@@ -45,7 +45,7 @@ class SpectrogramDataset(Dataset):
 # TODO we want separate training and validation dataloaders
 def make_dataloader(batch_size, val_ratio=0.2):
     # split train val
-    data_path = Path(__file__).parent.joinpath('data')
+    data_path = Path(__file__).parent.joinpath('data_full')
     labels_df = pd.read_csv(data_path.joinpath('training_labels.csv'))
 
     labels_x = labels_df.iloc[:, 0]
