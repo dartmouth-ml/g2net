@@ -1,6 +1,5 @@
 # model
 import pytorch_lightning as pl
-from torch._C import Value
 from torchmetrics import (
     MetricCollection,
     Accuracy,
@@ -20,7 +19,8 @@ from torchvision.models import (
 )
 from torch.optim.lr_scheduler import (
     ReduceLROnPlateau,
-    StepLR
+    StepLR,
+    CosineAnnealingLR,
 )
 from losses import ROCStarLoss
 
@@ -85,6 +85,9 @@ class LightningG2Net(pl.LightningModule):
             scheduler = StepLR(optimizer, 
                                scheduler_config.step_size,
                                scheduler_config.gamma)
+        
+        elif scheduler_config.name == 'CosineAnnealing':
+            scheduler = CosineAnnealingLR(optimizer, T_max=len(self.train_dataloader()))
 
         elif scheduler_config is not None:
             raise NotImplementedError(scheduler_config.name)
