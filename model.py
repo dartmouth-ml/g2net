@@ -111,7 +111,6 @@ class LightningG2Net(pl.LightningModule):
     def forward(self, x):
         # resnet
         x = self.resnet(x)
-        x = F.softmax(x, dim=-1)
         return x
     
     def on_train_start(self):
