@@ -42,9 +42,11 @@ trainer = pl.Trainer(
 
     gpus=config.trainer.gpus,
     auto_select_gpus=config.trainer.auto_select_gpus,
+    accelerator=config.trainer.accelerator,
 
     min_epochs=config.trainer.min_epochs,
     max_epochs=config.trainer.max_epochs,
+
     val_check_interval=config.trainer.val_check_interval,
     num_sanity_val_steps=0,
 
@@ -53,7 +55,7 @@ trainer = pl.Trainer(
     deterministic=config.trainer.deterministic,
 )
 
-dataloaders = make_dataloader(64)
+dataloaders = make_dataloader(64, val_ratio=config.dataloader.val_ratio, num_workers=config.dataloader.num_workers)
 model = LightningG2Net(config.model, config.optimizer, config.scheduler)
 trainer.fit(model, train_dataloaders=dataloaders['train'], val_dataloaders=dataloaders['val'])
 

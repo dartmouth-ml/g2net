@@ -41,11 +41,9 @@ class SpectrogramDataset(Dataset):
     def __len__(self):
         return len(self.file_names)
 
-
-# TODO we want separate training and validation dataloaders
-def make_dataloader(batch_size, val_ratio=0.2):
+def make_dataloader(batch_size, val_ratio=0.2, num_workers=0):
     # split train val
-    data_path = Path(__file__).parent.joinpath('data_full')
+    data_path = Path(__file__).parent.parent.joinpath('DMLG/g2net/data_full')
     labels_df = pd.read_csv(data_path.joinpath('training_labels.csv'))
 
     labels_x = labels_df.iloc[:, 0]
@@ -66,8 +64,8 @@ def make_dataloader(batch_size, val_ratio=0.2):
                                   transforms=transforms)
 
     return {
-        'train': DataLoader(dataset=train_dset, batch_size=batch_size, shuffle=True),
-        'val': DataLoader(dataset=val_dset, batch_size=batch_size, shuffle=False)
+        'train': DataLoader(dataset=train_dset, batch_size=batch_size, shuffle=True, num_workers=num_workers),
+        'val': DataLoader(dataset=val_dset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
     }                
 
 # A little bit of testing

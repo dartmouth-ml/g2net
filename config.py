@@ -17,8 +17,8 @@ config.dataloader.labels_path = DATA_ROOT.joinpath("training_labels.csv")
 config.dataloader.test_data_path = DATA_ROOT.joinpath("test")
 config.dataloader.test_labels_path = DATA_ROOT.joinpath("sample_submission.csv")
 config.dataloader.val_ratio = 0.2
-config.dataloader.batch_size = 64
-config.dataloader.num_workers = 8
+config.dataloader.batch_size = 256
+config.dataloader.num_workers = 16
 
 config.model = ConfigDict()
 config.model.pretrain = True
@@ -44,7 +44,8 @@ config.logging.entity = 'dmlg'
 config.logging.tags = [config.version]
 
 config.trainer = ConfigDict()
-config.trainer.gpus = 1 #1
+config.trainer.accelerator = 'ddp'
+config.trainer.gpus = 3 #1
 config.trainer.auto_select_gpus = True #True
 config.trainer.min_epochs = 0
 config.trainer.max_epochs = 200

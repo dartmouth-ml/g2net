@@ -41,9 +41,9 @@ class LightningG2Net(pl.LightningModule):
 
         # metrics
         self.metrics = MetricCollection([
-            Accuracy(num_classes=2, threshold=0.5),
-            F1(num_classes=2, threshold=0.5),
-            AUROC(num_classes=2),
+            Accuracy(num_classes=2, threshold=0.5, dist_sync_on_step=True),
+            F1(num_classes=2, threshold=0.5, dist_sync_on_step=True),
+            AUROC(num_classes=2, dist_sync_on_step=True),
         ])
 
         # aux metrics that we keep track of
@@ -129,7 +129,7 @@ class LightningG2Net(pl.LightningModule):
         metrics = {f'train/{k}':v for k,v in metrics.items()}
 
         self.log('train/loss', loss)
-        self.log_dict(metrics, on_step=False, on_epoch=True)
+        self.log_dict(metrics, on_step=False, on_epoch=True, sync_dist=True)
 
         if self.model_config.loss_fn == 'ROC_Star':
             self.loss_fn.epoch_true_acc[batch_idx] = targets
@@ -146,7 +146,7 @@ class LightningG2Net(pl.LightningModule):
         metrics = {f'val/{k}':v for k,v in metrics.items()}
 
         self.log('val/loss', loss)
-        self.log_dict(metrics, on_step=False, on_epoch=True)
+        self.log_dict(metrics, on_step=False, on_epoch=True, sync_dist=True)
 
         if self.model_config.loss_fn == 'ROC_Star':
             self.loss_fn.epoch_true_acc[batch_idx] = targets
