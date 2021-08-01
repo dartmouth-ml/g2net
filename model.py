@@ -1,4 +1,3 @@
-# model
 import pytorch_lightning as pl
 from torchmetrics import (
     MetricCollection,
