@@ -1,4 +1,3 @@
-# model
 import pytorch_lightning as pl
 from torchmetrics import (
     MetricCollection,
@@ -111,7 +110,6 @@ class LightningG2Net(pl.LightningModule):
     def forward(self, x):
         # resnet
         x = self.resnet(x)
-        x = F.softmax(x, dim=-1)
         return x
     
     def on_train_start(self):
@@ -127,7 +125,7 @@ class LightningG2Net(pl.LightningModule):
         logits = self.forward(inputs)
         loss = self.loss_fn(logits, targets)
 
-        metrics = self.metrics(logits, targets)
+        metrics = self.metrics(F.softmax(logits, dim=-1), targets)
         metrics = {f'train/{k}':v for k,v in metrics.items()}
 
         self.log('train/loss', loss)
@@ -144,7 +142,7 @@ class LightningG2Net(pl.LightningModule):
         logits = self.forward(inputs)
         loss = self.loss_fn(logits, targets)
 
-        metrics = self.metrics(logits, targets)
+        metrics = self.metrics(F.softmax(logits, dim=-1), targets)
         metrics = {f'val/{k}':v for k,v in metrics.items()}
 
         self.log('val/loss', loss)
