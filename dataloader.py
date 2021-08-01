@@ -44,28 +44,49 @@ class SpectrogramDataset(Dataset):
 def make_dataloader(batch_size, val_ratio=0.2, num_workers=0):
     # split train val
     data_path = Path(__file__).parent.parent.joinpath('DMLG/g2net/data_full')
-    labels_df = pd.read_csv(data_path.joinpath('training_labels.csv'))
 
-    labels_x = labels_df.iloc[:, 0]
-    labels_y = labels_df.iloc[:, 1]
-    m = labels_df.shape[0]
-    filenames_train, filenames_val, labels_train, labels_val = train_test_split(labels_x, 
-                                                                                labels_y,
-                                                                                train_size=int(m - (m * val_ratio)),
-                                                                                shuffle=True)
+    training_labels_path = data_path.joinpath('training_labels.csv')
+    validation_labels_path = data_path.joinpath('validation_labels.csv')
+
+    if training_labels_path.is_file() and validation_labels_path.is_file():
+        train_df = pd.read_csv(training_labels_path)
+        val_df = pd.read_csv(validation_labels_path)
     
+    else:
+        all_labels_path = data_path.joinpath('all_labels.csv')
+        all_df = pd.read_csv(all_labels_path)
+
+        labels_x = all_df.iloc[:, 0]
+        labels_y = all_df.iloc[:, 1]
+        m = all_df.shape[0]
+        train_size = int(m - (m * val_ratio))
+        filenames_train, filenames_val, labels_train, labels_val = train_test_split(labels_x, 
+                                                                                    labels_y,
+                                                                                    train_size=train_size,
+                                                                                    shuffle=True)
+        train_df = pd.concat([filenames_train, labels_train], axis=1)
+        val_df = pd.concat([filenames_val, labels_val], axis=1)
+        val_df.to_csv(validation_labels_path)
+
     transforms = Compose([ToTensor()])
     train_dset = SpectrogramDataset(data_path,
-                                    labels_df=pd.concat([filenames_train, labels_train], axis=1),
+                                    labels_df=train_df,
                                     transforms=transforms)
 
     val_dset = SpectrogramDataset(data_path,
-                                  labels_df=pd.concat([filenames_val, labels_val], axis=1),
+                                  labels_df=val_df,
                                   transforms=transforms)
 
     return {
-        'train': DataLoader(dataset=train_dset, batch_size=batch_size, shuffle=True, num_workers=num_workers),
-        'val': DataLoader(dataset=val_dset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
+        'train': DataLoader(dataset=train_dset,
+                            batch_size=batch_size,
+                            shuffle=True,
+                            num_workers=num_workers),
+                            
+        'val': DataLoader(dataset=val_dset,
+                          batch_size=batch_size,
+                          shuffle=False,
+                          num_workers=num_workers)
     }                
 
 # A little bit of testing
