@@ -109,7 +109,7 @@ class G2NetDataModule(LightningDataModule):
                          shuffle=False,
                          num_workers=self.config.num_workers)
     
-    def test_dataloader(self):
+    def predict_dataloader(self):
         return DataLoader(dataset=self.datasets['test'],
                          batch_size=self.config.batch_size,
                          shuffle=False,
