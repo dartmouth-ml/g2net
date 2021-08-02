@@ -1,19 +1,24 @@
-from torch.utils.data import Dataset, DataLoader
 import pandas as pd
 import numpy as np
-from torchvision.transforms import ToTensor, Compose
+from pathlib import Path
+
+from sklearn.model_selection import train_test_split
 from spectrogram import make_spectrogram
 import einops
-from sklearn.model_selection import train_test_split
+
+from torch.utils.data import Dataset, DataLoader
+from torchvision.transforms import ToTensor, Compose
+
 from pytorch_lightning import LightningDataModule
 
 class SpectrogramDataset(Dataset):
-    # data_path is a Path object
-    def __init__(self, data_path, labels_df, transforms=None):
+    def __init__(self, data_path: Path, labels_df: pd.DataFrame, transforms=None):
         super().__init__()
         self.time_series_path = data_path
+
         self.file_names = labels_df['id'].tolist()
         self.labels = np.array(labels_df['target'].tolist())
+
         self.transforms = transforms
         self.file_ext = '.npy'
 
@@ -25,8 +30,10 @@ class SpectrogramDataset(Dataset):
         file_name = self.file_names[idx]
         full_path = self.convert_to_full_path(file_name)
         time_series_data = np.load(full_path).astype(np.float32)
+
         spectrogram = make_spectrogram(time_series_data)
         spectrogram = einops.rearrange(spectrogram, 't c f -> c f t')
+        
         label = self.labels[idx]
         spectrogram = self.transforms(spectrogram)
 
