@@ -17,13 +17,12 @@ def save_train_labels_from_val():
     training_labels = pd.DataFrame(columns=['id', 'target'])
 
     validation_ids = set()
-    for row in validation_labels.iterrows():
-        id_, target = row
-        raise ValueError(id_, target)
+    for i, row in validation_labels.iterrows():
+        id_, target = row.loc['id'], row.loc['target']
         validation_ids.add(id_)
     
-    for row in all_labels.iterrows():
-        id_, target = row
+    for i, row in all_labels.iterrows():
+        id_, target = row.loc['id'], row.loc['target']
 
         if id_ not in validation_ids:
             training_labels.append({'id': id_, 'target': target})
