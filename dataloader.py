@@ -1,7 +1,6 @@
 from torch.utils.data import Dataset, DataLoader
 import pandas as pd
 import numpy as np
-from pathlib import Path
 from torchvision.transforms import ToTensor, Compose
 from spectrogram import make_spectrogram
 import einops
@@ -12,7 +11,7 @@ class SpectrogramDataset(Dataset):
     # data_path is a Path object
     def __init__(self, data_path, labels_df, transforms=None):
         super().__init__()
-        self.time_series_path = data_path.joinpath('train')
+        self.time_series_path = data_path
         self.file_names = labels_df['id'].tolist()
         self.labels = np.array(labels_df['target'].tolist())
         self.transforms = transforms
@@ -83,15 +82,15 @@ class G2NetDataModule(LightningDataModule):
         val_df = pd.read_csv(self.config.validation_labels_path)
         test_df = pd.read_csv(self.config.test_labels_path)
 
-        train_dset = SpectrogramDataset(self.config.data_path,
+        train_dset = SpectrogramDataset(self.config.data_path.joinpath('train'),
                                         labels_df=train_df,
                                         transforms=self.transforms['train'])
 
-        val_dset = SpectrogramDataset(self.config.data_path,
+        val_dset = SpectrogramDataset(self.config.data_path.joinpath('train'),
                                       labels_df=val_df,
                                       transforms=self.transforms['val'])
         
-        test_dset = SpectrogramDataset(self.config.data_path,
+        test_dset = SpectrogramDataset(self.config.data_path.joinpath('test'),
                                        labels_df=test_df,
                                        transforms=self.transforms['val'])
 

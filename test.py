@@ -38,6 +38,6 @@ if __name__ == "__main__":
                                                 model_config=config.model,
                                                 optimizer_config=config.optimizer,
                                                 scheduler_config=config.scheduler)
-    datamodule = G2NetDataModule(config.datamodule)
+    datamodule = G2NetDataModule(config.dataloader)
 
     create_submission(model, trainer, datamodule)
