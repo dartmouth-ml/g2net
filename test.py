@@ -1,5 +1,6 @@
 from pathlib import Path
 import pandas as pd
+import numpy as np
 import pytorch_lightning as pl
 from torch.nn.functional import softmax
 
@@ -15,15 +16,14 @@ def create_submission(model, trainer, datamodule):
 
     filenames = model_outs[0]['filename']
     logits = model_outs[0]['logits']
-    targets = model_outs[0]['targets']
 
     ids = [Path(filename).with_suffix('').name for filename in filenames]
 
     # confidence score for positive class 
     predictions = softmax(logits, dim=-1)[:, 1]
 
-    submission.loc['id'] = ids
-    submission.loc['target'] = predictions
+    submission['id'] = ids
+    submission['target'] = np.array(predictions)
     
     submission.to_csv("submission.csv")
 
