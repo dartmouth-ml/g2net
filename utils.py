@@ -25,7 +25,7 @@ def save_train_labels_from_val():
         id_, target = row.loc['id'], row.loc['target']
 
         if id_ not in validation_ids:
-            training_labels.append({'id': id_, 'target': target})
+            training_labels.append({'id': id_, 'target': target}, ignore_index=True)
     
     training_labels.to_csv(train_labels_path)
 
