@@ -47,7 +47,7 @@ class G2NetDataModule(LightningDataModule):
         super().__init__()
         self.config = config
     
-    def setup(self):
+    def setup(self, stage=None):
         if not self.config.validation_labels_path.is_file():
             self.split_train_val()
         
