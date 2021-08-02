@@ -9,8 +9,11 @@ config.checkpoint_path = DATA_ROOT.parent.joinpath('checkpoints/baseline/7312021
 config.seed = 10
 
 config.dataloader = ConfigDict()
-config.dataloader.data_path = DATA_ROOT.joinpath("test")
-config.dataloader.labels_path = DATA_ROOT.joinpath("test_labels.csv")
+config.dataloader.data_path = DATA_ROOT
+config.dataloader.all_labels_path = DATA_ROOT.joinpath("all_labels.csv")
+config.dataloader.training_labels_path = DATA_ROOT.joinpath("training_labels.csv")
+config.dataloader.validation_labels_path = DATA_ROOT.joinpath("validation_labels.csv")
+config.dataloader.test_labels_path = DATA_ROOT.joinpath("test_labels.csv")
 config.dataloader.batch_size = 256
 config.dataloader.num_workers = 1
 
