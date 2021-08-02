@@ -154,7 +154,7 @@ class LightningG2Net(pl.LightningModule):
 
         return loss
     
-    def predict_step(self, batch, batch_idx, dataloader_idx):
+    def predict_step(self, batch, batch_idx, dataloader_idx=None):
         inputs, targets, filename = batch
         logits = self.forward(inputs)
         loss = self.loss_fn(logits, targets)
