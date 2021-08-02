@@ -1,6 +1,4 @@
 from pathlib import Path
-
-from utils import get_datetime_version
 from ml_collections import ConfigDict
 
 PROJECT_ROOT = Path(__file__).parent
@@ -19,3 +17,20 @@ config.dataloader.num_workers = 1
 config.trainer = ConfigDict()
 config.trainer.gpus = 1 #1
 config.trainer.auto_select_gpus = True #True
+
+# dummies required for model init
+config.model = ConfigDict()
+config.model.pretrain = True
+config.model.backbone = "resnet18"
+config.model.loss_fn = 'CrossEntropy'
+
+config.optimizer = ConfigDict()
+config.optimizer.name = "Adam"
+config.optimizer.learning_rate = 1e-3
+
+config.scheduler = ConfigDict()
+config.scheduler.name = "ReduceLROnPlateau"
+config.scheduler.monitor = 'val/loss'
+config.scheduler.step_size = 50
+config.scheduler.gamma = 0.1
+config.scheduler.monitor = 'val/loss'
