@@ -34,7 +34,10 @@ if __name__ == "__main__":
         auto_select_gpus=config.trainer.auto_select_gpus,
     )
 
-    model = LightningG2Net.load_from_checkpoint(config.checkpoint_path)
+    model = LightningG2Net.load_from_checkpoint(config.checkpoint_path,
+                                                model_config=config.model,
+                                                optimizer_config=config.optimizer,
+                                                scheduler_config=config.scheduler)
     datamodule = G2NetDataModule(config.datamodule)
 
     create_submission(model, trainer, datamodule)
