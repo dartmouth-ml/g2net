@@ -15,7 +15,7 @@ config.dataloader.training_labels_path = DATA_ROOT.joinpath("training_labels.csv
 config.dataloader.validation_labels_path = DATA_ROOT.joinpath("validation_labels.csv")
 config.dataloader.test_labels_path = DATA_ROOT.joinpath("test_labels.csv")
 config.dataloader.batch_size = 256
-config.dataloader.num_workers = 1
+config.dataloader.num_workers = 8
 
 config.trainer = ConfigDict()
 config.trainer.gpus = 1 #1
