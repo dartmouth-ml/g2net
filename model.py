@@ -157,17 +157,6 @@ class LightningG2Net(pl.LightningModule):
     def predict_step(self, batch, batch_idx, dataloader_idx=None):
         inputs, targets, filename = batch
         logits = self.forward(inputs)
-        loss = self.loss_fn(logits, targets)
-
-        metrics = self.metrics(F.softmax(logits, dim=-1), targets)
-        metrics = {f'test/{k}':v for k,v in metrics.items()}
-
-        self.log('test/loss', loss)
-        self.log_dict(metrics, on_step=False, on_epoch=True, sync_dist=True)
-
-        if self.model_config.loss_fn == 'ROC_Star':
-            self.loss_fn.epoch_true_acc[batch_idx] = targets
-            self.loss_fn.epoch_pred_acc[batch_idx] = logits
 
         return {'logits': logits, 'targets': targets, 'filename': filename}
     
