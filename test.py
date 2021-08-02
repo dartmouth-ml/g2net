@@ -23,7 +23,7 @@ def create_submission(model, trainer, datamodule):
     predictions = softmax(logits, dim=-1)[:, 1]
 
     submission['id'] = ids
-    submission['target'] = np.array(predictions)
+    submission['target'] = predictions.cpu().numpy()
     
     submission.to_csv("submission.csv")
 
