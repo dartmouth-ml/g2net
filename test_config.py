@@ -7,7 +7,7 @@ PROJECT_ROOT = Path(__file__).parent
 DATA_ROOT = PROJECT_ROOT.parent.joinpath('DMLG/g2net/data_full')
 
 config = ConfigDict()
-config.checkpoint_path = DATA_ROOT.parent.joinpath('checkpoints/baseline/last.ckpt')
+config.checkpoint_path = DATA_ROOT.parent.joinpath('checkpoints/baseline/7312021_22488/last.ckpt')
 config.seed = 10
 
 config.dataloader = ConfigDict()

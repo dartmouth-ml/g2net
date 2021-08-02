@@ -16,6 +16,8 @@ def create_submission(model, trainer, datamodule):
     filenames = model_outs[0]['filename']
     logits = model_outs[0]['logits']
     targets = model_outs[0]['targets']
+    
+    raise ValueError(len(filenames), logits.shape, targets.shape)
 
     ids = [Path(filename).with_suffix('').name for filename in filenames]
 
@@ -35,6 +37,6 @@ if __name__ == "__main__":
     )
 
     model = LightningG2Net.load_from_checkpoint(config.checkpoint_path)
-    datamodule = G2NetDataModule(config.datamodule)
+    datamodule = G2NetDataModule(config.dataloader)
 
     create_submission(model, trainer, datamodule)
