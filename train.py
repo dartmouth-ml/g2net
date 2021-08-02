@@ -6,13 +6,10 @@ from pytorch_lightning.callbacks import (
     EarlyStopping
 )
 
-from dataloader import make_dataloader
+from dataloader import G2NetDataModule
 from model import LightningG2Net
-
-from test import create_submission
 from config import config
 
-# Training 
 if config.logging.use_wandb:
     logger = WandbLogger(name=config.logging.name,
                          tags=config.logging.tags,
@@ -55,8 +52,7 @@ trainer = pl.Trainer(
     deterministic=config.trainer.deterministic,
 )
 
-dataloaders = make_dataloader(64, val_ratio=config.dataloader.val_ratio, num_workers=config.dataloader.num_workers)
 model = LightningG2Net(config.model, config.optimizer, config.scheduler)
-trainer.fit(model, train_dataloaders=dataloaders['train'], val_dataloaders=dataloaders['val'])
+datamodule = G2NetDataModule(config.dataloader)
 
-# create_submission(trainer, datamodule)
+trainer.fit(model, datamodule=datamodule)
