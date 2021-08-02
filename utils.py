@@ -30,3 +30,4 @@ def save_train_labels_from_val():
     
     training_labels.to_csv(train_labels_path)
 
+save_train_labels_from_val()
