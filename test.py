@@ -25,7 +25,7 @@ def create_submission(model, trainer, datamodule):
     submission['id'] = ids
     submission['target'] = predictions.cpu().numpy()
     
-    submission.to_csv("submission.csv")
+    submission.to_csv("submission.csv", index=False, index_label=False)
 
 if __name__ == "__main__":
     trainer = pl.Trainer(
