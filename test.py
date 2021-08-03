@@ -26,7 +26,7 @@ def create_submission(model, trainer, datamodule):
         # confidence score for positive class 
         predictions = softmax(logits, dim=-1)[:, 1]
 
-        all_ids.append(*ids)
+        all_ids.extend(ids)
         all_predictions.append(predictions.cpu().numpy())
     
     all_predictions = np.concatenate(all_predictions, axis=0)
