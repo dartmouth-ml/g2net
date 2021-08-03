@@ -24,7 +24,7 @@ def create_submission(model, trainer, datamodule):
         predictions = softmax(logits, dim=-1)[:, 1]
 
         submission['id'].append(pd.Series(ids))
-        submission['target'].append(predictions.cpu().numpy())
+        submission['target'].append(pd.Series(predictions.cpu().numpy()))
     
     print(f'submission shape: {submission.shape}')
     submission.to_csv("submission.csv", index=False, index_label=False)
