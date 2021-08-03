@@ -14,6 +14,9 @@ def create_submission(model, trainer, datamodule):
                                  datamodule=datamodule,
                                  return_predictions=True)
     
+    all_ids = []
+    all_predictions = []
+
     for batch in model_outs:
         filenames = batch['filename']
         logits = batch['logits']
@@ -23,9 +26,15 @@ def create_submission(model, trainer, datamodule):
         # confidence score for positive class 
         predictions = softmax(logits, dim=-1)[:, 1]
 
-        submission['id'].append(pd.Series(ids))
-        submission['target'].append(pd.Series(predictions.cpu().numpy()))
+        all_ids.append(*ids)
+        all_predictions.append(predictions.cpu().numpy())
     
+    all_predictions = np.concatenate(all_predictions, axis=0)
+
+    print(len(all_ids), all_predictions.shape)
+    submission.loc['id'] = all_ids
+    submission.loc['target'] = all_predictions
+
     print(f'submission shape: {submission.shape}')
     submission.to_csv("submission.csv", index=False, index_label=False)
 
