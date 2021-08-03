@@ -13,18 +13,20 @@ def create_submission(model, trainer, datamodule):
     model_outs = trainer.predict(model=model,
                                  datamodule=datamodule,
                                  return_predictions=True)
-
-    filenames = model_outs[0]['filename']
-    logits = model_outs[0]['logits']
-
-    ids = [Path(filename).with_suffix('').name for filename in filenames]
-
-    # confidence score for positive class 
-    predictions = softmax(logits, dim=-1)[:, 1]
-
-    submission['id'] = ids
-    submission['target'] = predictions.cpu().numpy()
     
+    for batch in model_outs:
+        filenames = batch['filename']
+        logits = batch['logits']
+
+        ids = [Path(filename).with_suffix('').name for filename in filenames]
+
+        # confidence score for positive class 
+        predictions = softmax(logits, dim=-1)[:, 1]
+
+        submission['id'].append(ids)
+        submission['target'].append(predictions.cpu().numpy())
+    
+    print(f'submission shape: {submission.shape}')
     submission.to_csv("submission.csv", index=False, index_label=False)
 
 if __name__ == "__main__":
