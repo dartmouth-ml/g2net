@@ -23,7 +23,7 @@ def create_submission(model, trainer, datamodule):
         # confidence score for positive class 
         predictions = softmax(logits, dim=-1)[:, 1]
 
-        submission['id'].append(ids)
+        submission['id'].append(pd.Series(ids))
         submission['target'].append(predictions.cpu().numpy())
     
     print(f'submission shape: {submission.shape}')
