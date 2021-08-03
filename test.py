@@ -16,14 +16,15 @@ def create_submission(model, trainer, datamodule):
 
     filenames = model_outs[0]['filename']
     logits = model_outs[0]['logits']
-
+    
+    raise ValueError(len(model_outs))
     ids = [Path(filename).with_suffix('').name for filename in filenames]
 
     # confidence score for positive class 
     predictions = softmax(logits, dim=-1)[:, 1]
 
     submission['id'] = ids
-    submission['target'] = np.array(predictions)
+    submission['target'] = predictions.cpu().numpy()
     
     submission.to_csv("submission.csv")
 
