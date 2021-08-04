@@ -21,6 +21,7 @@ from torch.optim.lr_scheduler import (
     StepLR,
     CosineAnnealingLR,
 )
+import einops
 from losses import ROCStarLoss
 
 class LightningG2Net(pl.LightningModule):
@@ -30,9 +31,18 @@ class LightningG2Net(pl.LightningModule):
                  scheduler_config):
         super(LightningG2Net, self).__init__()
 
-        self.resnet = self.configure_backbone(model_config.backbone, model_config.pretrain)
-        self.resnet.fc = nn.Linear(512, 2)
+        self.expander = nn.Conv2d(1, 3, kernel_size=(1, 3), stride=1, bias=False)
+        nn.init.constant_(self.expander.weight, 1.)
 
+        self.resnet = self.configure_backbone(model_config.backbone,
+                                              model_config.pretrain,
+                                              num_classes=512)
+
+        self.aggregator = nn.LSTM(input_size=512, hidden_size=1024, num_layers=2, batch_first=True)
+        self.classification_head = nn.Sequential(nn.Linear(1024, 1024),
+                                                 nn.SiLU(),
+                                                 nn.Linear(1024, 2))
+    
         # hparams
         self.optimizer_config = optimizer_config
         self.scheduler_config = scheduler_config
@@ -49,17 +59,17 @@ class LightningG2Net(pl.LightningModule):
         # aux metrics that we keep track of
         self.prev_epoch_trues = torch.Tensor()
     
-    def configure_backbone(self, backbone, pretrained):
+    def configure_backbone(self, backbone, pretrained, num_classes):
         if backbone == 'resnet18':
-            return resnet18(pretrained=pretrained) # remove last layer, fix first layer
+            return resnet18(pretrained=pretrained, num_classes=num_classes) # remove last layer, fix first layer
         elif backbone == 'resnet34':
-            return resnet34(pretrained=pretrained) # remove last layer, fix first layer
+            return resnet34(pretrained=pretrained, num_classes=num_classes) # remove last layer, fix first layer
         elif backbone == 'resnet50':
-            return resnet50(pretrained=pretrained) # remove last layer, fix first layer     
+            return resnet50(pretrained=pretrained, num_classes=num_classes) # remove last layer, fix first layer     
         elif backbone == 'resnet101':
-            return resnet101(pretrained=pretrained)
+            return resnet101(pretrained=pretrained, num_classes=num_classes)
         elif backbone == 'googlenet':
-            return googlenet(pretrained=pretrained)
+            return googlenet(pretrained=pretrained, num_classes=num_classes)
         else:
             raise NotImplementedError(backbone)
 
@@ -108,9 +118,18 @@ class LightningG2Net(pl.LightningModule):
                     "lr_scheduler": scheduler_dict}
 
     def forward(self, x):
-        # resnet
-        x = self.resnet(x)
-        return x
+        # x is b, 3, m, t
+        x = einops.rearrange(x, 'b 3 m t -> (b 3) 1 m t')
+        x = self.expander(x)
+
+        resnet_outs = self.resnet(x)
+        resnet_outs = einops.rearrange(resnet_outs, '(b 3) 512 1 1 -> b 3 512')
+        
+        # aggregate
+        _, (hidden_outs, _) = self.aggregator(resnet_outs)
+        output = self.classification_head(hidden_outs[-1, ...]) # b, 2
+
+        return output
     
     def on_train_start(self):
         if self.model_config.loss_fn == 'ROC_Star':
@@ -122,7 +141,7 @@ class LightningG2Net(pl.LightningModule):
 
     def training_step(self, batch, batch_idx):
         inputs, targets, filename = batch
-        logits = self.forward(inputs)
+        logits = self(inputs)
         loss = self.loss_fn(logits, targets)
 
         metrics = self.metrics(F.softmax(logits, dim=-1), targets)

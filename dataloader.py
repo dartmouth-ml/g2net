@@ -31,13 +31,13 @@ class SpectrogramDataset(Dataset):
         full_path = self.convert_to_full_path(file_name)
         time_series_data = np.load(full_path).astype(np.float32)
 
-        spectrogram = make_spectrogram(time_series_data)
-        spectrogram = einops.rearrange(spectrogram, 't c f -> c f t')
-        
-        label = self.labels[idx]
-        spectrogram = self.transforms(spectrogram)
+        spectrograms = make_spectrogram(time_series_data)
+        spectograms = np.stack(spectrograms, axis=0) # 3, n_mels, t
 
-        return spectrogram, label, file_name
+        label = self.labels[idx]
+        spectrograms = self.transforms(spectograms)
+
+        return spectrograms, label, file_name
 
     def convert_to_full_path(self, file_name):
         full_path = self.time_series_path.joinpath(*[s for s in file_name[:3]], file_name).with_suffix(self.file_ext)
