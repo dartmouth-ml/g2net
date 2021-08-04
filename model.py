@@ -1,5 +1,4 @@
 import pytorch_lightning as pl
-from torch.nn.init import xavier_normal_
 from torchmetrics import (
     MetricCollection,
     Accuracy,
@@ -32,8 +31,12 @@ class LightningG2Net(pl.LightningModule):
                  scheduler_config):
         super(LightningG2Net, self).__init__()
 
-        self.expander = nn.Conv2d(1, 3, kernel_size=(1, 3), stride=1, bias=False)
-        nn.init.constant_(self.expander.weight, 1.)
+        expander_conv = nn.Conv2d(1, 3, kernel_size=(1, 3), stride=1, bias=False)
+        nn.init.constant_(expander_conv.weight, 1.)
+        self.expander = nn.Sequential(
+            expander_conv,
+            nn.ReLU()
+        )
 
         self.resnet = self.configure_backbone(model_config.backbone,
                                               model_config.pretrain,
