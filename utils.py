@@ -1,6 +1,8 @@
 import datetime
 import pandas as pd
 from pathlib import Path
+import random
+import shutil
 
 def get_datetime_version():
     now = datetime.datetime.now()
@@ -29,4 +31,33 @@ def save_train_labels_from_val():
     
     training_labels.to_csv(train_labels_path)
 
-save_train_labels_from_val()
+def make_debug_data():
+    root = Path(__file__).resolve().parent.parent.joinpath('DMLG/g2net/data_full')
+    all_labels_path = root.joinpath('all_labels.csv')
+    
+    n_samples = 64
+    random_idxs = random.sample(list(range(64)), k=n_samples)
+
+    all_labels_df = pd.read_csv(all_labels_path)
+    sample_labels = all_labels_df.iloc[random_idxs, :]
+
+    debug_path = root.parent.joinpath('data_debug')
+    debug_path.mkdir(parents=True, exist_ok=True)
+
+    for _, row in sample_labels.iterrows():
+        prefix = '/'.join([c for c in row['id'][:3]])
+        src_path = root.joinpath(prefix, row['id']).with_suffix('.png')
+        dst = root.parent.joinpath('data_debug', prefix, row['id']).with_suffix('.png')
+
+        shutil.copy(src_path, dst)
+    
+    sample_labels.to_csv(root.parent.joinpath('data_debug', 'labels.csv'))
+
+if __name__ == "__main__":
+    make_debug_data()
+
+
+
+
+
+    
