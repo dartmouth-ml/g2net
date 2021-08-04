@@ -5,7 +5,8 @@ PROJECT_ROOT = Path(__file__).parent
 DATA_ROOT = PROJECT_ROOT.parent.joinpath('DMLG/g2net/data_full')
 
 config = ConfigDict()
-config.checkpoint_path = DATA_ROOT.parent.joinpath('checkpoints/baseline/7312021_22488/last.ckpt')
+config.checkpoint_path = PROJECT_ROOT.joinpath('checkpoints/expand_collate/842021_1438/last.ckpt')
+config.submission_path = PROJECT_ROOT.joinpath('submissions')
 config.seed = 10
 
 config.dataloader = ConfigDict()
@@ -18,8 +19,8 @@ config.dataloader.batch_size = 256
 config.dataloader.num_workers = 8
 
 config.trainer = ConfigDict()
-config.trainer.gpus = 0 #1
-config.trainer.auto_select_gpus = False #True
+config.trainer.gpus = 1 #1
+config.trainer.auto_select_gpus = True #True
 
 # dummies required for model init
 config.model = ConfigDict()

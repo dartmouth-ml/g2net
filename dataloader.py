@@ -104,12 +104,12 @@ class G2NetDataModule(LightningDataModule):
         
         if self.config.test_labels_path.is_file():
             test_df = pd.read_csv(self.config.test_labels_path)
-
+        
         if train_df is not None:
             train_dset = SpectrogramDataset(self.config.data_path.joinpath('train'),
                                             labels_df=train_df,
                                             transforms=self.transforms['train'])
-        
+                    
         if val_df is not None:
             val_dset = SpectrogramDataset(self.config.data_path.joinpath('train'),
                                           labels_df=val_df,
@@ -123,31 +123,19 @@ class G2NetDataModule(LightningDataModule):
         return {'train': train_dset, 'val': val_dset, 'test': test_dset}
 
     def train_dataloader(self):
-       print("TRAIN DATALOADER:" + str(self.datasets['train'] is None))
-       if self.datasets['train']:
         return DataLoader(dataset=self.datasets['train'],
                           batch_size=self.config.batch_size,
                           shuffle=True,
                           num_workers=self.config.num_workers)
-       else:
-           return None
     
     def val_dataloader(self):
-        print("VAL DATALOADER:" + str(self.datasets['val'] is None))
-        if self.datasets['val']:
-            return DataLoader(dataset=self.datasets['val'],
-                            batch_size=self.config.batch_size,
-                            shuffle=False,
-                            num_workers=self.config.num_workers)
-        else:
-            return None
+        return DataLoader(dataset=self.datasets['val'],
+                        batch_size=self.config.batch_size,
+                        shuffle=False,
+                        num_workers=self.config.num_workers)
     
     def predict_dataloader(self):
-        print("PREDICT DATALOADER:" + str(self.datasets['test'] is None))
-        if self.datasets['train']:
-            return DataLoader(dataset=self.datasets['test'],
-                            batch_size=self.config.batch_size,
-                            shuffle=False,
-                            num_workers=self.config.num_workers)
-        else:
-            return None
+        return DataLoader(dataset=self.datasets['test'],
+                        batch_size=self.config.batch_size,
+                        shuffle=False,
+                        num_workers=self.config.num_workers)

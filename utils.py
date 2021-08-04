@@ -1,7 +1,6 @@
 import datetime
 import pandas as pd
 from pathlib import Path
-import random
 import shutil
 
 def get_datetime_version():
@@ -19,16 +18,24 @@ def save_train_labels_from_val():
     training_labels = pd.DataFrame(columns=['id', 'target'])
 
     validation_ids = set()
-    for i, row in validation_labels.iterrows():
+    ids = []
+    targets = []
+
+    for _, row in validation_labels.iterrows():
         id_, target = row.loc['id'], row.loc['target']
         validation_ids.add(id_)
     
-    for i, row in all_labels.iterrows():
+    for _, row in all_labels.iterrows():
         id_, target = row.loc['id'], row.loc['target']
 
         if id_ not in validation_ids:
-            training_labels.append({'id': id_, 'target': target}, ignore_index=True)
-    
+            ids.append(id_)
+            targets.append(target)
+
+    training_labels['id'] = ids
+    training_labels['target'] = targets
+    print(training_labels.shape)
+
     training_labels.to_csv(train_labels_path)
 
 def make_debug_data():
@@ -54,7 +61,7 @@ def make_debug_data():
     sample_labels.to_csv(root.parent.joinpath('data_debug', 'labels.csv'), index=False, index_label=None)
 
 if __name__ == "__main__":
-    make_debug_data()
+    save_train_labels_from_val()
 
 
 
