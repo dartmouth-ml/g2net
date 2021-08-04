@@ -18,8 +18,8 @@ config.dataloader.batch_size = 256
 config.dataloader.num_workers = 8
 
 config.trainer = ConfigDict()
-config.trainer.gpus = 1 #1
-config.trainer.auto_select_gpus = True #True
+config.trainer.gpus = 0 #1
+config.trainer.auto_select_gpus = False #True
 
 # dummies required for model init
 config.model = ConfigDict()
