@@ -3,7 +3,6 @@ from torchmetrics import (
     MetricCollection,
     Accuracy,
     AUROC,
-    F1,
 )
 
 import torch
@@ -31,13 +30,12 @@ class LightningG2Net(pl.LightningModule):
                  scheduler_config):
         super(LightningG2Net, self).__init__()
 
-        self.expanders = []
+        self.expanders = nn.ModuleList()
         for _ in range(3):
-            expander_conv = nn.Conv2d(1, 3, kernel_size=(1, 3), padding=(0, 1), stride=1, bias=False)
-            nn.init.constant_(expander_conv.weight, 1.)
+            expander_conv = nn.Conv2d(1, 3, kernel_size=(3, 3), padding=(1, 1), stride=1, bias=False)
             self.expanders.append(nn.Sequential(
                 expander_conv,
-                nn.ReLU()
+                nn.SiLU()
             ))
 
         self.resnet = self.configure_backbone(model_config.backbone,
@@ -134,7 +132,7 @@ class LightningG2Net(pl.LightningModule):
             part = einops.rearrange(x[:, i, ...], 'b m t -> b 1 m t')
             expander_outputs.append(self.expanders[i](part))
         
-        x = torch.stack(expander_outputs, dim=1)
+        x = torch.stack(expander_outputs, dim=1).type_as(x)
         x = einops.rearrange(x,  'b n c m t -> (b n) c m t', b=b, n=3, c=3)
         
         x = self.resnet(x)
@@ -203,5 +201,4 @@ class LightningG2Net(pl.LightningModule):
     def on_train_epoch_end(self):
         if self.model_config.loss_fn == "ROC_Star":
             self.loss_fn.on_epoch_end()
-    
     
