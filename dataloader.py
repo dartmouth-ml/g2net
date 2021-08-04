@@ -85,38 +85,54 @@ class G2NetDataModule(LightningDataModule):
         return {'train': train_transforms, 'val': val_transforms}
 
     def get_datasets(self):
+        train_dset = None
+        val_dset = None
+        test_dset = None
+
         train_df = pd.read_csv(self.config.training_labels_path)
         val_df = pd.read_csv(self.config.validation_labels_path)
         test_df = pd.read_csv(self.config.test_labels_path)
 
-        train_dset = SpectrogramDataset(self.config.data_path.joinpath('train'),
-                                        labels_df=train_df,
-                                        transforms=self.transforms['train'])
-
-        val_dset = SpectrogramDataset(self.config.data_path.joinpath('train'),
-                                      labels_df=val_df,
-                                      transforms=self.transforms['val'])
+        if train_df.is_file():
+            train_dset = SpectrogramDataset(self.config.data_path.joinpath('train'),
+                                            labels_df=train_df,
+                                            transforms=self.transforms['train'])
         
-        test_dset = SpectrogramDataset(self.config.data_path.joinpath('test'),
-                                       labels_df=test_df,
-                                       transforms=self.transforms['val'])
+        if val_df.is_file():
+            val_dset = SpectrogramDataset(self.config.data_path.joinpath('train'),
+                                        labels_df=val_df,
+                                        transforms=self.transforms['val'])
+        
+        if test_df.is_file():
+            test_dset = SpectrogramDataset(self.config.data_path.joinpath('test'),
+                                        labels_df=test_df,
+                                        transforms=self.transforms['val'])
 
         return {'train': train_dset, 'val': val_dset, 'test': test_dset}
 
     def train_dataloader(self):
-       return DataLoader(dataset=self.datasets['train'],
-                         batch_size=self.config.batch_size,
-                         shuffle=True,
-                         num_workers=self.config.num_workers)
+       if self.datasets['train']:
+        return DataLoader(dataset=self.datasets['train'],
+                            batch_size=self.config.batch_size,
+                            shuffle=True,
+                            num_workers=self.config.num_workers)
+       else:
+           return None
     
     def val_dataloader(self):
-        return DataLoader(dataset=self.datasets['val'],
-                         batch_size=self.config.batch_size,
-                         shuffle=False,
-                         num_workers=self.config.num_workers)
+        if self.datasets['val']:
+            return DataLoader(dataset=self.datasets['val'],
+                            batch_size=self.config.batch_size,
+                            shuffle=False,
+                            num_workers=self.config.num_workers)
+        else:
+            return None
     
     def predict_dataloader(self):
-        return DataLoader(dataset=self.datasets['test'],
-                         batch_size=self.config.batch_size,
-                         shuffle=False,
-                         num_workers=self.config.num_workers)
+        if self.datasets['train']:
+            return DataLoader(dataset=self.datasets['test'],
+                            batch_size=self.config.batch_size,
+                            shuffle=False,
+                            num_workers=self.config.num_workers)
+        else:
+            return None

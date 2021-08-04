@@ -12,16 +12,17 @@ config.version = get_datetime_version()
 config.seed = 10
 
 config.dataloader = ConfigDict()
-config.dataloader.data_path = DATA_ROOT.joinpath("train")
-config.dataloader.labels_path = DATA_ROOT.joinpath("training_labels.csv")
-config.dataloader.test_data_path = DATA_ROOT.joinpath("test")
-config.dataloader.test_labels_path = DATA_ROOT.joinpath("sample_submission.csv")
+config.dataloader.data_path = DATA_ROOT
+config.dataloader.all_labels_path = DATA_ROOT.joinpath("all_labels.csv")
+config.dataloader.training_labels_path = DATA_ROOT.joinpath("training_labels.csv")
+config.dataloader.validation_labels_path = DATA_ROOT.joinpath("validation_labels.csv")
+config.dataloader.test_labels_path = DATA_ROOT.joinpath("test_labels.csv")
 config.dataloader.val_ratio = 0.2
 config.dataloader.batch_size = 256
 config.dataloader.num_workers = 16
 
 config.model = ConfigDict()
-config.model.pretrain = True
+config.model.pretrain = False
 config.model.backbone = "resnet18"
 config.model.loss_fn = 'CrossEntropy'
 
@@ -51,7 +52,7 @@ config.trainer.min_epochs = 0
 config.trainer.max_epochs = 200
 config.trainer.val_check_interval = 1000
 config.trainer.resume_from_checkpoint = None
-config.trainer.fast_dev_run = False
+config.trainer.fast_dev_run = True
 config.trainer.deterministic = False
 
 config.checkpoint = ConfigDict()

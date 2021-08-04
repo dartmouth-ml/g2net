@@ -46,9 +46,10 @@ def make_debug_data():
 
     for _, row in sample_labels.iterrows():
         prefix = '/'.join([c for c in row['id'][:3]])
-        src_path = root.joinpath(prefix, row['id']).with_suffix('.png')
-        dst = root.parent.joinpath('data_debug', prefix, row['id']).with_suffix('.png')
-
+        src_path = root.joinpath('train', prefix, row['id']).with_suffix('.npy')
+        dst = root.parent.joinpath('data_debug', prefix, row['id']).with_suffix('.npy')
+	
+        dst.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy(src_path, dst)
     
     sample_labels.to_csv(root.parent.joinpath('data_debug', 'labels.csv'))
