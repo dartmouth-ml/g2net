@@ -4,7 +4,6 @@ from pathlib import Path
 
 from sklearn.model_selection import train_test_split
 from spectrogram import make_spectrogram
-import einops
 
 from torch.utils.data import Dataset, DataLoader
 from torchvision.transforms import ToTensor, Compose
@@ -64,6 +63,10 @@ class G2NetDataModule(LightningDataModule):
         all_labels_path = self.config.all_labels_path
         all_df = pd.read_csv(all_labels_path)
 
+        if self.config.val_ratio == 0:
+            all_df.to_csv(self.config.training_labels_path)
+            return
+
         labels_x = all_df.iloc[:, 0]
         labels_y = all_df.iloc[:, 1]
         m = all_df.shape[0]
@@ -89,33 +92,42 @@ class G2NetDataModule(LightningDataModule):
         val_dset = None
         test_dset = None
 
-        train_df = pd.read_csv(self.config.training_labels_path)
-        val_df = pd.read_csv(self.config.validation_labels_path)
-        test_df = pd.read_csv(self.config.test_labels_path)
+        train_df = None
+        val_df = None
+        test_df = None
 
-        if train_df.is_file():
+        if self.config.training_labels_path.is_file():
+            train_df = pd.read_csv(self.config.training_labels_path)
+        
+        if self.config.validation_labels_path.is_file():
+            val_df = pd.read_csv(self.config.validation_labels_path)
+        
+        if self.config.test_labels_path.is_file():
+            test_df = pd.read_csv(self.config.test_labels_path)
+
+        if train_df is not None:
             train_dset = SpectrogramDataset(self.config.data_path.joinpath('train'),
                                             labels_df=train_df,
                                             transforms=self.transforms['train'])
         
-        if val_df.is_file():
+        if val_df is not None:
             val_dset = SpectrogramDataset(self.config.data_path.joinpath('train'),
-                                        labels_df=val_df,
-                                        transforms=self.transforms['val'])
+                                          labels_df=val_df,
+                                          transforms=self.transforms['val'])
         
-        if test_df.is_file():
+        if test_df is not None:
             test_dset = SpectrogramDataset(self.config.data_path.joinpath('test'),
-                                        labels_df=test_df,
-                                        transforms=self.transforms['val'])
+                                           labels_df=test_df,
+                                           transforms=self.transforms['val'])
 
         return {'train': train_dset, 'val': val_dset, 'test': test_dset}
 
     def train_dataloader(self):
        if self.datasets['train']:
         return DataLoader(dataset=self.datasets['train'],
-                            batch_size=self.config.batch_size,
-                            shuffle=True,
-                            num_workers=self.config.num_workers)
+                          batch_size=self.config.batch_size,
+                          shuffle=True,
+                          num_workers=self.config.num_workers)
        else:
            return None
     

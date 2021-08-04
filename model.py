@@ -1,4 +1,5 @@
 import pytorch_lightning as pl
+from torch.nn.init import xavier_normal_
 from torchmetrics import (
     MetricCollection,
     Accuracy,
@@ -118,18 +119,20 @@ class LightningG2Net(pl.LightningModule):
                     "lr_scheduler": scheduler_dict}
 
     def forward(self, x):
-        # x is b, 3, m, t
-        x = einops.rearrange(x, 'b 3 m t -> (b 3) 1 m t')
-        x = self.expander(x)
+        print(x.shape)
+        b, c, m, t = x.shape
 
-        resnet_outs = self.resnet(x)
-        resnet_outs = einops.rearrange(resnet_outs, '(b 3) 512 1 1 -> b 3 512')
+        x = einops.rearrange(x, 'b c m t -> (b c) 1 m t', b=b, c=c)
+        x = self.expander(x) # (b 3) 3 m t
+
+        x = self.resnet(x) # (b 3) 512
         
         # aggregate
-        _, (hidden_outs, _) = self.aggregator(resnet_outs)
-        output = self.classification_head(hidden_outs[-1, ...]) # b, 2
+        x = einops.rearrange(x, '(b c) d -> b c d', b=b, c=c)
+        _, (x, _) = self.aggregator(x)
+        x = self.classification_head(x[-1, ...]) # b, 2
 
-        return output
+        return x
     
     def on_train_start(self):
         if self.model_config.loss_fn == 'ROC_Star':
@@ -141,6 +144,8 @@ class LightningG2Net(pl.LightningModule):
 
     def training_step(self, batch, batch_idx):
         inputs, targets, filename = batch
+        inputs = einops.rearrange(inputs, 'b t c f -> b c f t')
+
         logits = self(inputs)
         loss = self.loss_fn(logits, targets)
 
@@ -158,7 +163,9 @@ class LightningG2Net(pl.LightningModule):
     
     def validation_step(self, batch, batch_idx):
         inputs, targets, filename = batch
-        logits = self.forward(inputs)
+        inputs = einops.rearrange(inputs, 'b t c f -> b c f t')
+
+        logits = self(inputs)
         loss = self.loss_fn(logits, targets)
 
         metrics = self.metrics(F.softmax(logits, dim=-1), targets)
@@ -175,7 +182,9 @@ class LightningG2Net(pl.LightningModule):
     
     def predict_step(self, batch, batch_idx, dataloader_idx=None):
         inputs, targets, filename = batch
-        logits = self.forward(inputs)
+        inputs = einops.rearrange(inputs, 'b t c f -> b c f t')
+
+        logits = self(inputs)
 
         return {'logits': logits, 'targets': targets, 'filename': filename}
     
