@@ -36,10 +36,9 @@ def make_debug_data():
     all_labels_path = root.joinpath('all_labels.csv')
     
     n_samples = 64
-    random_idxs = random.sample(list(range(64)), k=n_samples)
 
     all_labels_df = pd.read_csv(all_labels_path)
-    sample_labels = all_labels_df.iloc[random_idxs, :]
+    sample_labels = all_labels_df.sample(n=n_samples)
 
     debug_path = root.parent.joinpath('data_debug')
     debug_path.mkdir(parents=True, exist_ok=True)
@@ -52,7 +51,7 @@ def make_debug_data():
         dst.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy(src_path, dst)
     
-    sample_labels.to_csv(root.parent.joinpath('data_debug', 'labels.csv'))
+    sample_labels.to_csv(root.parent.joinpath('data_debug', 'labels.csv'), index=False, index_label=None)
 
 if __name__ == "__main__":
     make_debug_data()
