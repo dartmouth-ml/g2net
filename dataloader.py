@@ -120,9 +120,6 @@ class G2NetDataModule(LightningDataModule):
                                            labels_df=test_df,
                                            transforms=self.transforms['val'])
         
-        print("DSET DEBUG")
-        print(train_dset is None, val_dset is None, test_dset is None)
-        
         return {'train': train_dset, 'val': val_dset, 'test': test_dset}
 
     def train_dataloader(self):

@@ -119,7 +119,6 @@ class LightningG2Net(pl.LightningModule):
                     "lr_scheduler": scheduler_dict}
 
     def forward(self, x):
-        print(x.shape)
         b, c, m, t = x.shape
 
         x = einops.rearrange(x, 'b c m t -> (b c) 1 m t', b=b, c=c)
