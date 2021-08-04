@@ -119,10 +119,14 @@ class G2NetDataModule(LightningDataModule):
             test_dset = SpectrogramDataset(self.config.data_path.joinpath('test'),
                                            labels_df=test_df,
                                            transforms=self.transforms['val'])
-
+        
+        print("DSET DEBUG")
+        print(train_dset is None, val_dset is None, test_dset is None)
+        
         return {'train': train_dset, 'val': val_dset, 'test': test_dset}
 
     def train_dataloader(self):
+       print("TRAIN DATALOADER:" + str(self.datasets['train'] is None))
        if self.datasets['train']:
         return DataLoader(dataset=self.datasets['train'],
                           batch_size=self.config.batch_size,
@@ -132,6 +136,7 @@ class G2NetDataModule(LightningDataModule):
            return None
     
     def val_dataloader(self):
+        print("VAL DATALOADER:" + str(self.datasets['val'] is None))
         if self.datasets['val']:
             return DataLoader(dataset=self.datasets['val'],
                             batch_size=self.config.batch_size,
@@ -141,6 +146,7 @@ class G2NetDataModule(LightningDataModule):
             return None
     
     def predict_dataloader(self):
+        print("PREDICT DATALOADER:" + str(self.datasets['test'] is None))
         if self.datasets['train']:
             return DataLoader(dataset=self.datasets['test'],
                             batch_size=self.config.batch_size,

@@ -11,7 +11,7 @@ from model import LightningG2Net
 from config import config
 
 if config.logging.use_wandb:
-    logger = WandbLogger(name=config.logging.name,
+    logger = WandbLogger(name=config.model_name,
                          tags=config.logging.tags,
                          project=config.logging.project,
                          entity=config.logging.entity)
