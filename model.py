@@ -31,12 +31,14 @@ class LightningG2Net(pl.LightningModule):
                  scheduler_config):
         super(LightningG2Net, self).__init__()
 
-        expander_conv = nn.Conv2d(1, 3, kernel_size=(1, 3), stride=1, bias=False)
-        nn.init.constant_(expander_conv.weight, 1.)
-        self.expander = nn.Sequential(
-            expander_conv,
-            nn.ReLU()
-        )
+        self.expanders = []
+        for _ in range(3):
+            expander_conv = nn.Conv2d(1, 3, kernel_size=(1, 3), padding=(0, 1), stride=1, bias=False)
+            nn.init.constant_(expander_conv.weight, 1.)
+            self.expanders.append(nn.Sequential(
+                expander_conv,
+                nn.ReLU()
+            ))
 
         self.resnet = self.configure_backbone(model_config.backbone,
                                               model_config.pretrain,
@@ -56,7 +58,6 @@ class LightningG2Net(pl.LightningModule):
         # metrics
         self.metrics = MetricCollection([
             Accuracy(num_classes=2, threshold=0.5, dist_sync_on_step=True),
-            F1(num_classes=2, threshold=0.5, dist_sync_on_step=True),
             AUROC(num_classes=2, dist_sync_on_step=True),
         ])
 
@@ -105,6 +106,10 @@ class LightningG2Net(pl.LightningModule):
         elif scheduler_config is not None:
             raise NotImplementedError(scheduler_config.name)
         
+        monitor = scheduler_config.get('monitor', None)
+
+        if monitor is None:
+            return {'scheduler': scheduler}
         return {'scheduler': scheduler, 'monitor': scheduler_config.monitor}
 
     def configure_optimizers(self):
@@ -124,13 +129,18 @@ class LightningG2Net(pl.LightningModule):
     def forward(self, x):
         b, c, m, t = x.shape
 
-        x = einops.rearrange(x, 'b c m t -> (b c) 1 m t', b=b, c=c)
-        x = self.expander(x) # (b 3) 3 m t
-
-        x = self.resnet(x) # (b 3) 512
+        expander_outputs = []
+        for i in range(3):
+            part = einops.rearrange(x[:, i, ...], 'b m t -> b 1 m t')
+            expander_outputs.append(self.expanders[i](part))
+        
+        x = torch.stack(expander_outputs, dim=1)
+        x = einops.rearrange(x,  'b n c m t -> (b n) c m t', b=b, n=3, c=3)
+        
+        x = self.resnet(x)
         
         # aggregate
-        x = einops.rearrange(x, '(b c) d -> b c d', b=b, c=c)
+        x = einops.rearrange(x, '(b n) d -> b n d', b=b, n=3)
         _, (x, _) = self.aggregator(x)
         x = self.classification_head(x[-1, ...]) # b, 2
 

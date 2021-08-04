@@ -54,5 +54,6 @@ trainer = pl.Trainer(
 
 model = LightningG2Net(config.model, config.optimizer, config.scheduler)
 datamodule = G2NetDataModule(config.dataloader)
+datamodule.setup()
 
 trainer.fit(model, datamodule=datamodule)

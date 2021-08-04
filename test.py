@@ -1,18 +1,38 @@
+from typing import Union, Optional
+
 from pathlib import Path
 import pandas as pd
 import numpy as np
 import pytorch_lightning as pl
+from pytorch_lightning import LightningDataModule
+from pytorch_lightning import Trainer
+from pytorch_lightning import LightningModule
 from torch.nn.functional import softmax
+from torch.utils.data import DataLoader
 
 from model import LightningG2Net
 from dataloader import G2NetDataModule
 from test_config import config
 
-def create_submission(model, trainer, datamodule):
+def create_submission(model: LightningModule,
+                      trainer: Trainer,
+                      datamodule: Union[LightningDataModule, None],
+                      dataloader: Optional[Union[DataLoader, None]],
+                      out_dir: Path):
+    
+    if datamodule is None and dataloader is None:
+        raise ValueError('one of datamodule and dataloader cannot be None')
+
     submission = pd.DataFrame(columns=["id", "target"])
-    model_outs = trainer.predict(model=model,
-                                 datamodule=datamodule,
-                                 return_predictions=True)
+
+    if datamodule is not None:
+        model_outs = trainer.predict(model=model,
+                                    datamodule=datamodule,
+                                    return_predictions=True)
+    elif dataloader is not None:
+        model_outs = trainer.predict(model=model,
+                                     dataloaders=dataloader,
+                                     return_predictions=True)
     
     all_ids = []
     all_predictions = []
@@ -36,7 +56,8 @@ def create_submission(model, trainer, datamodule):
     submission['target'] = pd.Series(all_predictions)
 
     print(f'submission shape: {submission.shape}')
-    submission.to_csv("submission.csv", index=False, index_label=False)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    submission.to_csv(out_dir.joinpath("submission.csv"), index=False, index_label=False)
 
 if __name__ == "__main__":
     trainer = pl.Trainer(
@@ -51,4 +72,8 @@ if __name__ == "__main__":
                                                 scheduler_config=config.scheduler)
     datamodule = G2NetDataModule(config.dataloader)
 
-    create_submission(model, trainer, datamodule)
+    create_submission(model,
+                      trainer,
+                      datamodule,
+                      dataloader=None,
+                      out_dir=config.submission_path)
