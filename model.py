@@ -23,6 +23,15 @@ from torch.optim.lr_scheduler import (
 import einops
 from losses import ROCStarLoss
 
+class Reducer(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv1 = nn.Conv2d(9, 3, kernel_size=(1, 3), stride=1, padding=(0, 1))
+
+    def forward(self, x):
+        x = self.conv1(x)
+        return F.relu(x)
+    
 class LightningG2Net(pl.LightningModule):
     def __init__(self,
                  model_config,
@@ -30,13 +39,7 @@ class LightningG2Net(pl.LightningModule):
                  scheduler_config):
         super(LightningG2Net, self).__init__()
 
-        self.expanders = nn.ModuleList()
-        for _ in range(3):
-            expander_conv = nn.Conv2d(1, 3, kernel_size=(3, 3), padding=(1, 1), stride=1, bias=False)
-            self.expanders.append(nn.Sequential(
-                expander_conv,
-                nn.SiLU()
-            ))
+        self.reducer = Reducer()
 
         self.resnet = self.configure_backbone(model_config.backbone,
                                               model_config.pretrain,
@@ -127,13 +130,13 @@ class LightningG2Net(pl.LightningModule):
     def forward(self, x):
         b, c, m, t = x.shape
 
-        expander_outputs = []
+        reducer_outputs = []
         for i in range(3):
-            part = einops.rearrange(x[:, i, ...], 'b m t -> b 1 m t')
-            expander_outputs.append(self.expanders[i](part))
+            part = einops.rearrange(x[:, i, ...], 'b m t -> b m 1 t')
+            reducer_outputs.append(self.reducer(part))
         
-        x = torch.stack(expander_outputs, dim=1).type_as(x)
-        x = einops.rearrange(x,  'b n c m t -> (b n) c m t', b=b, n=3, c=3)
+        x = torch.stack(reducer_outputs, dim=1).type_as(x)
+        x = einops.rearrange(x, 'b n c 1 t -> (b n) c 1 t', b=b, n=3, c=3)
         
         x = self.resnet(x)
         
