@@ -4,7 +4,7 @@ from utils import get_datetime_version
 from ml_collections import ConfigDict
 
 PROJECT_ROOT = Path(__file__).parent
-DATA_ROOT = PROJECT_ROOT.joinpath('data')
+DATA_ROOT = PROJECT_ROOT.parent.joinpath('data_full')
 
 config = ConfigDict()
 config.model_name = "baseline"
@@ -45,8 +45,8 @@ config.logging.tags = [config.version]
 
 config.trainer = ConfigDict()
 config.trainer.accelerator = 'ddp'
-config.trainer.gpus = 3 #1
-config.trainer.auto_select_gpus = True #True
+config.trainer.gpus = 0 #1
+config.trainer.auto_select_gpus = False #True
 config.trainer.min_epochs = 0
 config.trainer.max_epochs = 200
 config.trainer.val_check_interval = 1000
