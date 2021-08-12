@@ -32,7 +32,9 @@ class LightningG2Net(pl.LightningModule):
 
         self.resnet = self.configure_backbone(model_config.backbone, model_config.pretrain)
         self.resnet.fc = nn.Linear(512, 2)
-
+        self.conv1d_net = self.create_conv1d_net()
+        self.combo_net = self.create_combo_net()
+    
         # hparams
         self.optimizer_config = optimizer_config
         self.scheduler_config = scheduler_config
@@ -106,11 +108,50 @@ class LightningG2Net(pl.LightningModule):
         else:
             return {"optimizer": optimizer, 
                     "lr_scheduler": scheduler_dict}
+    def create_combo_net(self):
+        combo_net = nn.Sequential(
+            nn.Linear(4,2)
+        )
+        return combo_net
 
-    def forward(self, x):
+    def create_conv1d_net(self):
+        lay1_out = self.conv1d_lout(4096, 4, 4)
+        lay2_out = self.conv1d_lout(lay1_out,4,4)
+        lay3_out = self.conv1d_lout(lay2_out,4,4)
+        lay4_out = self.conv1d_lout(lay3_out,4,4)
+        lay5_out = self.conv1d_lout(lay4_out,4,4)
+        print(int(lay1_out))
+        conv1d_net = nn.Sequential(
+            nn.Conv1d(in_channels=3,out_channels=32,kernel_size=4, stride=4),
+            nn.BatchNorm1d(num_features=32),
+            nn.ReLU(),
+            nn.Conv1d(in_channels=32, out_channels=64, kernel_size=4, stride=4),
+            nn.BatchNorm1d(num_features=64),
+            nn.ReLU(),
+            nn.Conv1d(in_channels=64, out_channels=128, kernel_size=4, stride=4),
+            nn.BatchNorm1d(num_features=128),
+            nn.Conv1d(in_channels=128, out_channels=256, kernel_size=4, stride=4),
+            nn.BatchNorm1d(num_features=256),
+            nn.ReLU(),
+            nn.Conv1d(in_channels=256, out_channels=512, kernel_size=4, stride=4),
+            nn.BatchNorm1d(num_features=512),
+            nn.ReLU(),
+            nn.AdaptiveMaxPool1d(1),
+            nn.Flatten(),
+            nn.Linear(512,2)
+        )
+        print(conv1d_net)
+        return conv1d_net
+    
+    def conv1d_lout(self, lin, kernel_size, stride):
+        return int((lin-(kernel_size-1)-1)/stride + 1)
+
+    def forward(self, x, time_series):
         # resnet
-        x = self.resnet(x)
-        return x
+        x1 = self.resnet(x)
+        x2 = self.conv1d_net(torch.squeeze(time_series))
+        y = self.combo_net(torch.cat((x1, x2),1))
+        return y
     
     def on_train_start(self):
         if self.model_config.loss_fn == 'ROC_Star':
@@ -121,9 +162,9 @@ class LightningG2Net(pl.LightningModule):
             self.loss_fn.on_epoch_end()
 
     def training_step(self, batch, batch_idx):
-        inputs, targets, filename = batch
-        logits = self.forward(inputs)
-        loss = self.loss_fn(logits, targets)
+        inputs, targets, filename, time_series_data = batch
+        logits = self.forward(inputs, time_series_data)
+        loss = self.loss_fn(logits, targets.long())
 
         metrics = self.metrics(F.softmax(logits, dim=-1), targets)
         metrics = {f'train/{k}':v for k,v in metrics.items()}
@@ -138,9 +179,9 @@ class LightningG2Net(pl.LightningModule):
         return loss
     
     def validation_step(self, batch, batch_idx):
-        inputs, targets, filename = batch
-        logits = self.forward(inputs)
-        loss = self.loss_fn(logits, targets)
+        inputs, targets, filename, time_series_data = batch
+        logits = self.forward(inputs, time_series_data)
+        loss = self.loss_fn(logits, targets.long())
 
         metrics = self.metrics(F.softmax(logits, dim=-1), targets)
         metrics = {f'val/{k}':v for k,v in metrics.items()}
@@ -155,8 +196,8 @@ class LightningG2Net(pl.LightningModule):
         return loss
     
     def predict_step(self, batch, batch_idx, dataloader_idx=None):
-        inputs, targets, filename = batch
-        logits = self.forward(inputs)
+        inputs, targets, filename, time_series_data = batch
+        logits = self.forward(inputs, time_series_data)
 
         return {'logits': logits, 'targets': targets, 'filename': filename}
     

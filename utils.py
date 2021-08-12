@@ -8,9 +8,9 @@ def get_datetime_version():
     return res
 
 def save_train_labels_from_val():
-    train_labels_path = Path(__file__).resolve().parent.parent.joinpath('DMLG/g2net/data_full/training_labels.csv')
-    validation_labels_path = Path(__file__).resolve().parent.parent.joinpath('DMLG/g2net/data_full/validation_labels.csv')
-    all_labels_path = Path(__file__).resolve().parent.parent.joinpath('DMLG/g2net/data_full/all_labels.csv')
+    train_labels_path = Path(__file__).resolve().parent.parent.joinpath('g2net/data_debug/train_labels.csv')
+    validation_labels_path = Path(__file__).resolve().parent.parent.joinpath('g2net/data_debug/val_labels.csv')
+    all_labels_path = Path(__file__).resolve().parent.parent.joinpath('g2net/data_debug/labels.csv')
 
     all_labels = pd.read_csv(all_labels_path)
     validation_labels = pd.read_csv(validation_labels_path)
@@ -29,4 +29,4 @@ def save_train_labels_from_val():
     
     training_labels.to_csv(train_labels_path)
 
-save_train_labels_from_val()
+#save_train_labels_from_val()

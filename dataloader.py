@@ -7,7 +7,7 @@ from spectrogram import make_spectrogram
 import einops
 
 from torch.utils.data import Dataset, DataLoader
-from torchvision.transforms import ToTensor, Compose
+from torchvision.transforms import ToTensor, Compose, Normalize
 
 from pytorch_lightning import LightningDataModule
 
@@ -34,10 +34,15 @@ class SpectrogramDataset(Dataset):
         spectrogram = make_spectrogram(time_series_data)
         spectrogram = einops.rearrange(spectrogram, 't c f -> c f t')
         
+
         label = self.labels[idx]
         spectrogram = self.transforms(spectrogram)
 
-        return spectrogram, label, file_name
+        self.ts_transforms = Compose([ToTensor()])
+
+        time_series_data = self.ts_transforms(time_series_data)
+
+        return spectrogram, label, file_name, time_series_data
 
     def convert_to_full_path(self, file_name):
         full_path = self.time_series_path.joinpath(*[s for s in file_name[:3]], file_name).with_suffix(self.file_ext)
@@ -77,6 +82,7 @@ class G2NetDataModule(LightningDataModule):
 
         train_df.to_csv(self.config.training_labels_path)
         val_df.to_csv(self.config.validation_labels_path)
+
 
     def get_transforms(self):
         train_transforms = Compose([ToTensor()])

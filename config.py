@@ -4,7 +4,7 @@ from utils import get_datetime_version
 from ml_collections import ConfigDict
 
 PROJECT_ROOT = Path(__file__).parent
-DATA_ROOT = PROJECT_ROOT.joinpath('data')
+DATA_ROOT = PROJECT_ROOT.joinpath('data_debug')
 
 config = ConfigDict()
 config.model_name = "baseline"
@@ -13,12 +13,15 @@ config.seed = 10
 
 config.dataloader = ConfigDict()
 config.dataloader.data_path = DATA_ROOT.joinpath("train")
-config.dataloader.labels_path = DATA_ROOT.joinpath("training_labels.csv")
+config.dataloader.labels_path = DATA_ROOT.joinpath("labels.csv")
+config.dataloader.all_labels_path = DATA_ROOT.joinpath("labels.csv")
+config.dataloader.training_labels_path = DATA_ROOT.joinpath("train_labels.csv")
 config.dataloader.test_data_path = DATA_ROOT.joinpath("test")
 config.dataloader.test_labels_path = DATA_ROOT.joinpath("sample_submission.csv")
+config.dataloader.validation_labels_path = DATA_ROOT.joinpath("val_labels.csv")
 config.dataloader.val_ratio = 0.2
-config.dataloader.batch_size = 256
-config.dataloader.num_workers = 16
+config.dataloader.batch_size = 8
+config.dataloader.num_workers = 8
 
 config.model = ConfigDict()
 config.model.pretrain = True
@@ -32,24 +35,24 @@ config.optimizer.learning_rate = 1e-3
 config.scheduler = ConfigDict()
 config.scheduler.name = "ReduceLROnPlateau"
 config.scheduler.monitor = 'val/loss'
-config.scheduler.step_size = 50
+config.scheduler.step_size = 10
 config.scheduler.gamma = 0.1
 config.scheduler.monitor = 'val/loss'
 
 config.logging = ConfigDict()
 config.logging.use_wandb = True
 config.logging.name = 'baseline'
-config.logging.project = 'g2net'
-config.logging.entity = 'dmlg'
+config.logging.project = 'test'
+config.logging.entity = 'et22'
 config.logging.tags = [config.version]
 
 config.trainer = ConfigDict()
 config.trainer.accelerator = 'ddp'
-config.trainer.gpus = 3 #1
-config.trainer.auto_select_gpus = True #True
+config.trainer.gpus = 0#3 #1
+config.trainer.auto_select_gpus = False#True #True
 config.trainer.min_epochs = 0
-config.trainer.max_epochs = 200
-config.trainer.val_check_interval = 1000
+config.trainer.max_epochs = 2
+config.trainer.val_check_interval = 1
 config.trainer.resume_from_checkpoint = None
 config.trainer.fast_dev_run = False
 config.trainer.deterministic = False

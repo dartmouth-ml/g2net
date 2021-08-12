@@ -10,49 +10,53 @@ from dataloader import G2NetDataModule
 from model import LightningG2Net
 from config import config
 
-if config.logging.use_wandb:
-    logger = WandbLogger(name=config.logging.name,
-                         tags=config.logging.tags,
-                         project=config.logging.project,
-                         entity=config.logging.entity)
-else:
-    logger = []
+def train():
+    if config.logging.use_wandb:
+        logger = WandbLogger(name=config.logging.name,
+                            tags=config.logging.tags,
+                            project=config.logging.project,
+                            entity=config.logging.entity)
+    else:
+        logger = []
 
-callbacks = [LearningRateMonitor()]
+    callbacks = [LearningRateMonitor()]
 
-if config.checkpoint.save_checkpoint:
-    callbacks.append(ModelCheckpoint(dirpath=config.checkpoint.save_dir,
-                                     monitor=config.checkpoint.monitor,
-                                     mode=config.checkpoint.monitor_mode,
-                                     save_last=config.checkpoint.save_last,
-                                     save_top_k=config.checkpoint.save_top_k,
-                                     every_n_train_steps=config.checkpoint.every_n_steps))
+    if config.checkpoint.save_checkpoint:
+        callbacks.append(ModelCheckpoint(dirpath=config.checkpoint.save_dir,
+                                        monitor=config.checkpoint.monitor,
+                                        mode=config.checkpoint.monitor_mode,
+                                        save_last=config.checkpoint.save_last,
+                                        save_top_k=config.checkpoint.save_top_k,
+                                        every_n_train_steps=config.checkpoint.every_n_steps))
 
-if config.early_stopping.stop_early:
-    callbacks.append(EarlyStopping(monitor=config.early_stopping.monitor, 
-                                   min_delta=config.early_stopping.min_delta, 
-                                   patience=config.early_stopping.patience))
+    if config.early_stopping.stop_early:
+        callbacks.append(EarlyStopping(monitor=config.early_stopping.monitor, 
+                                    min_delta=config.early_stopping.min_delta, 
+                                    patience=config.early_stopping.patience))
 
-trainer = pl.Trainer(
-    callbacks=callbacks,
-    logger=logger,
+    trainer = pl.Trainer(
+        callbacks=callbacks,
+        logger=logger,
 
-    gpus=config.trainer.gpus,
-    auto_select_gpus=config.trainer.auto_select_gpus,
-    accelerator=config.trainer.accelerator,
+        gpus=config.trainer.gpus,
+        auto_select_gpus=config.trainer.auto_select_gpus,
+        accelerator=config.trainer.accelerator,
 
-    min_epochs=config.trainer.min_epochs,
-    max_epochs=config.trainer.max_epochs,
+        min_epochs=config.trainer.min_epochs,
+        max_epochs=config.trainer.max_epochs,
 
-    val_check_interval=config.trainer.val_check_interval,
-    num_sanity_val_steps=0,
+        val_check_interval=config.trainer.val_check_interval,
+        num_sanity_val_steps=0,
 
-    resume_from_checkpoint=config.trainer.resume_from_checkpoint,
-    fast_dev_run=config.trainer.fast_dev_run,
-    deterministic=config.trainer.deterministic,
-)
+        resume_from_checkpoint=config.trainer.resume_from_checkpoint,
+        fast_dev_run=config.trainer.fast_dev_run,
+        deterministic=config.trainer.deterministic,
+    )
 
-model = LightningG2Net(config.model, config.optimizer, config.scheduler)
-datamodule = G2NetDataModule(config.dataloader)
+    model = LightningG2Net(config.model, config.optimizer, config.scheduler)
+    datamodule = G2NetDataModule(config.dataloader)
 
-trainer.fit(model, datamodule=datamodule)
+    trainer.fit(model, datamodule=datamodule)
+
+if __name__ == '__main__':
+    train()
