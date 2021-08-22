@@ -1,0 +1,30 @@
+#!/bin/bash
+
+# Name of the job
+#SBATCH --job-name=test
+
+#SBATCH --partition gpuq
+#SBATCH --gres=gpu:k80:1
+#SBATCH -o run_%j.txt
+#SBATCH -e run_%j.err
+
+# Number of compute nodes
+#SBATCH --nodes=1
+
+# Number of tasks per node
+#SBATCH --ntasks-per-node=1
+
+# Number of CPUs per task
+#SBATCH --cpus-per-task=1
+
+# Request memory
+#SBATCH --mem=8G
+
+# Walltime (job duration)
+#SBATCH --time=48:00:00
+
+# Email notifications (comma-separated options: BEGIN,END,FAIL)
+#SBATCH --mail-type=BEGIN,END,FAIL
+
+conda activate g2net
+python train.py

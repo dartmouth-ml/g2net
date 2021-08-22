@@ -1,6 +1,5 @@
 from pathlib import Path
 
-from wandb import Config
 from utils import get_datetime_version
 from ml_collections import ConfigDict
 
@@ -18,8 +17,8 @@ config.dataloader.labels_path = DATA_ROOT.joinpath("training_labels.csv")
 config.dataloader.test_data_path = DATA_ROOT.joinpath("test")
 config.dataloader.test_labels_path = DATA_ROOT.joinpath("sample_submission.csv")
 config.dataloader.val_ratio = 0.2
-config.dataloader.batch_size = 64
-config.dataloader.num_workers = 0
+config.dataloader.batch_size = 256
+config.dataloader.num_workers = 16
 
 config.model = ConfigDict()
 config.model.pretrain = True
@@ -45,8 +44,9 @@ config.logging.entity = 'dmlg'
 config.logging.tags = [config.version]
 
 config.trainer = ConfigDict()
-config.trainer.gpus = 0 #1
-config.trainer.auto_select_gpus = False #True
+config.trainer.accelerator = 'ddp'
+config.trainer.gpus = 3 #1
+config.trainer.auto_select_gpus = True #True
 config.trainer.min_epochs = 0
 config.trainer.max_epochs = 200
 config.trainer.val_check_interval = 1000

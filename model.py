@@ -1,4 +1,3 @@
-# model
 import pytorch_lightning as pl
 from torchmetrics import (
     MetricCollection,
@@ -9,6 +8,7 @@ from torchmetrics import (
 
 import torch
 from torch import nn
+import torch.nn.functional as F
 from torchvision.models import (
     resnet18,
     resnet34,
@@ -18,7 +18,8 @@ from torchvision.models import (
 )
 from torch.optim.lr_scheduler import (
     ReduceLROnPlateau,
-    StepLR
+    StepLR,
+    CosineAnnealingLR,
 )
 from losses import ROCStarLoss
 
@@ -30,7 +31,7 @@ class LightningG2Net(pl.LightningModule):
         super(LightningG2Net, self).__init__()
 
         self.resnet = self.configure_backbone(model_config.backbone, model_config.pretrain)
-        self.resnet.fc = nn.Linear(512, 1)
+        self.resnet.fc = nn.Linear(512, 2)
 
         # hparams
         self.optimizer_config = optimizer_config
@@ -40,9 +41,9 @@ class LightningG2Net(pl.LightningModule):
 
         # metrics
         self.metrics = MetricCollection([
-            Accuracy(num_classes=2, threshold=0.5),
-            F1(num_classes=2, threshold=0.5),
-            AUROC(num_classes=2),
+            Accuracy(num_classes=2, threshold=0.5, dist_sync_on_step=True),
+            F1(num_classes=2, threshold=0.5, dist_sync_on_step=True),
+            AUROC(num_classes=2, dist_sync_on_step=True),
         ])
 
         # aux metrics that we keep track of
@@ -63,8 +64,8 @@ class LightningG2Net(pl.LightningModule):
             raise NotImplementedError(backbone)
 
     def configure_loss_fn(self):
-        if self.model_config.loss_fn == 'BCELoss':
-            return nn.BCEWithLogitsLoss(weight=None)
+        if self.model_config.loss_fn == 'CrossEntropy':
+            return nn.CrossEntropyLoss(weight=None)
         
         elif self.model_config.loss_fn == 'ROC_Star':
             return ROCStarLoss()
@@ -83,6 +84,9 @@ class LightningG2Net(pl.LightningModule):
             scheduler = StepLR(optimizer, 
                                scheduler_config.step_size,
                                scheduler_config.gamma)
+        
+        elif scheduler_config.name == 'CosineAnnealing':
+            scheduler = CosineAnnealingLR(optimizer, T_max=len(self.train_dataloader()))
 
         elif scheduler_config is not None:
             raise NotImplementedError(scheduler_config.name)
@@ -106,7 +110,6 @@ class LightningG2Net(pl.LightningModule):
     def forward(self, x):
         # resnet
         x = self.resnet(x)
-        
         return x
     
     def on_train_start(self):
@@ -120,34 +123,42 @@ class LightningG2Net(pl.LightningModule):
     def training_step(self, batch, batch_idx):
         inputs, targets, filename = batch
         logits = self.forward(inputs)
-        preds = torch.argmax(logits, dim=-1)
-        loss = self.loss_fn(torch.squeeze(logits, dim=-1), targets)
+        loss = self.loss_fn(logits, targets)
 
-        metrics = self.metrics(preds, targets)
+        metrics = self.metrics(F.softmax(logits, dim=-1), targets)
         metrics = {f'train/{k}':v for k,v in metrics.items()}
 
         self.log('train/loss', loss)
-        self.log_dict(metrics, on_step=False, on_epoch=True)
+        self.log_dict(metrics, on_step=False, on_epoch=True, sync_dist=True)
 
         if self.model_config.loss_fn == 'ROC_Star':
             self.loss_fn.epoch_true_acc[batch_idx] = targets
             self.loss_fn.epoch_pred_acc[batch_idx] = logits
         
-        return {'loss': loss, 'logits': logits}
+        return loss
     
     def validation_step(self, batch, batch_idx):
         inputs, targets, filename = batch
         logits = self.forward(inputs)
-        preds = torch.argmax(logits, dim=-1)
-        loss = self.loss_fn(torch.squeeze(logits, dim=-1), targets, self.gamma)
+        loss = self.loss_fn(logits, targets)
 
-        metrics = self.metrics(preds, targets)
+        metrics = self.metrics(F.softmax(logits, dim=-1), targets)
         metrics = {f'val/{k}':v for k,v in metrics.items()}
 
         self.log('val/loss', loss)
-        self.log_dict(metrics, on_step=False, on_epoch=True)
+        self.log_dict(metrics, on_step=False, on_epoch=True, sync_dist=True)
+
+        if self.model_config.loss_fn == 'ROC_Star':
+            self.loss_fn.epoch_true_acc[batch_idx] = targets
+            self.loss_fn.epoch_pred_acc[batch_idx] = logits
 
         return loss
+    
+    def predict_step(self, batch, batch_idx, dataloader_idx=None):
+        inputs, targets, filename = batch
+        logits = self.forward(inputs)
+
+        return {'logits': logits, 'targets': targets, 'filename': filename}
     
     def on_train_epoch_end(self):
         if self.model_config.loss_fn == "ROC_Star":
