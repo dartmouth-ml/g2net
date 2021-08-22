@@ -2,6 +2,15 @@ import datetime
 import pandas as pd
 from pathlib import Path
 import shutil
+import numpy as np
+import matplotlib.pyplot as plt
+import sys
+
+newpath = str(Path(sys.path[-1]).parent)
+sys.path.append(newpath)
+from baseline.dataloader import SpectrogramDataset
+
+DATA_PATH = Path(__file__).resolve().parent.parent.joinpath('DMLG/g2net/data_full')
 
 def get_datetime_version():
     now = datetime.datetime.now()
@@ -9,9 +18,9 @@ def get_datetime_version():
     return res
 
 def save_train_labels_from_val():
-    train_labels_path = Path(__file__).resolve().parent.parent.joinpath('DMLG/g2net/data_full/training_labels.csv')
-    validation_labels_path = Path(__file__).resolve().parent.parent.joinpath('DMLG/g2net/data_full/validation_labels.csv')
-    all_labels_path = Path(__file__).resolve().parent.parent.joinpath('DMLG/g2net/data_full/all_labels.csv')
+    train_labels_path = DATA_PATH.joinpath('training_labels.csv')
+    validation_labels_path = DATA_PATH.joinpath('validation_labels.csv')
+    all_labels_path = DATA_PATH.joinpath('all_labels.csv')
 
     all_labels = pd.read_csv(all_labels_path)
     validation_labels = pd.read_csv(validation_labels_path)
@@ -39,7 +48,7 @@ def save_train_labels_from_val():
     training_labels.to_csv(train_labels_path)
 
 def make_debug_data():
-    root = Path(__file__).resolve().parent.parent.joinpath('DMLG/g2net/data_full')
+    root = DATA_PATH
     all_labels_path = root.joinpath('all_labels.csv')
     
     n_samples = 64
@@ -60,8 +69,30 @@ def make_debug_data():
     
     sample_labels.to_csv(root.parent.joinpath('data_debug', 'labels.csv'), index=False, index_label=None)
 
+def examine_dataset_outputs():
+    train_data_path = DATA_PATH.joinpath('train')
+    labels_df_path = DATA_PATH.joinpath('training_labels.csv')
+    labels_df = pd.read_csv(labels_df_path)
+
+    ds = SpectrogramDataset(train_data_path, labels_df, rescale=[-1, 1], bandpass=[20, 500], return_time_series=True)
+    n = 1
+
+    for i in range(n):
+        spec, ts, label, filename = ds[i]
+        og_ts = np.load(filename).astype(np.float32)
+
+        plt.subplot(1, 2, 1)
+        x = list(range(len(og_ts.shape[1])))
+        plt.plot(x=x, y=og_ts)
+
+        plt.subplot(1, 2, 2)
+        plt.plot(x=x, y=ts)
+
+        plt.savefig(f'{Path(__file__).joinpath(f"rescale_bandpass_{i}")}')
+
+
 if __name__ == "__main__":
-    save_train_labels_from_val()
+    examine_dataset_outputs()
 
 
 

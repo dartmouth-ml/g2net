@@ -1,9 +1,13 @@
+from typing import List, Union
+
 import pandas as pd
 import numpy as np
 from pathlib import Path
 
 from sklearn.model_selection import train_test_split
-from spectrogram import make_spectrogram
+from sklearn.preprocessing import MinMaxScaler
+from scipy.signal import butter, sosfilt
+from baseline.spectrogram import make_spectrogram
 
 from torch.utils.data import Dataset, DataLoader
 from torchvision.transforms import ToTensor, Compose
@@ -11,15 +15,30 @@ from torchvision.transforms import ToTensor, Compose
 from pytorch_lightning import LightningDataModule
 
 class SpectrogramDataset(Dataset):
-    def __init__(self, data_path: Path, labels_df: pd.DataFrame, transforms=None):
+    def __init__(self,
+                 data_path: Path,
+                 labels_df: pd.DataFrame,
+                 rescale: Union[List[float], None] = None,
+                 bandpass: Union[List[float], None] = None,
+                 return_time_series: bool = False,
+                 transforms=None):
         super().__init__()
         self.time_series_path = data_path
 
         self.file_names = labels_df['id'].tolist()
         self.labels = np.array(labels_df['target'].tolist())
 
+        self.return_time_series = return_time_series
         self.transforms = transforms
+        self.rescale = rescale
         self.file_ext = '.npy'
+
+        if self.rescale is not None:
+            self.rescaler = MinMaxScaler(feature_range=rescale)
+        
+        self.bandpass = bandpass
+        if bandpass is not None:
+            self.bandpass_filter = butter(N=10, Wn=bandpass, btype='bandpass', output='sos', fs=4096)
 
     def __getitem__(self, idx):
         """
@@ -30,13 +49,23 @@ class SpectrogramDataset(Dataset):
         full_path = self.convert_to_full_path(file_name)
         time_series_data = np.load(full_path).astype(np.float32)
 
+        # rescale
+        if self.rescale:
+            time_series_data = self.rescaler.fit_transform(np.expand_dims(time_series_data, axis=0))[0, ...]
+        
+        if self.bandpass:
+            time_series_data = sosfilt(self.bandpass_filter, time_series_data)
+
         spectrograms = make_spectrogram(time_series_data)
         spectograms = np.stack(spectrograms, axis=0) # 3, n_mels, t
 
         label = self.labels[idx]
         spectrograms = self.transforms(spectograms)
 
-        return spectrograms, label, file_name
+        if self.return_time_series:
+            return spectrograms, time_series_data, label, full_path
+        else:
+            return spectrograms, label, full_path
 
     def convert_to_full_path(self, file_name):
         full_path = self.time_series_path.joinpath(*[s for s in file_name[:3]], file_name).with_suffix(self.file_ext)
@@ -108,16 +137,22 @@ class G2NetDataModule(LightningDataModule):
         if train_df is not None:
             train_dset = SpectrogramDataset(self.config.data_path.joinpath('train'),
                                             labels_df=train_df,
+                                            rescale=self.config.rescale,
+                                            bandpass=self.config.bandpass,
                                             transforms=self.transforms['train'])
                     
         if val_df is not None:
             val_dset = SpectrogramDataset(self.config.data_path.joinpath('train'),
                                           labels_df=val_df,
+                                          rescale=self.config.rescale,
+                                          bandpass=self.config.bandpass,
                                           transforms=self.transforms['val'])
         
         if test_df is not None:
             test_dset = SpectrogramDataset(self.config.data_path.joinpath('test'),
                                            labels_df=test_df,
+                                           rescale=self.config.rescale,
+                                           bandpass=self.config.bandpass,
                                            transforms=self.transforms['val'])
         
         return {'train': train_dset, 'val': val_dset, 'test': test_dset}

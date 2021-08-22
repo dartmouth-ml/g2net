@@ -19,11 +19,13 @@ config.dataloader.test_labels_path = DATA_ROOT.joinpath("test_labels.csv")
 config.dataloader.val_ratio = 0.2
 config.dataloader.batch_size = 64
 config.dataloader.num_workers = 8
+config.dataloader.rescale = [-1, 1]
 
 config.model = ConfigDict()
 config.model.pretrain = False
 config.model.backbone = "resnet18"
 config.model.loss_fn = 'CrossEntropy'
+config.model.bandpass = [20, 500]
 
 config.optimizer = ConfigDict()
 config.optimizer.name = "Adam"
