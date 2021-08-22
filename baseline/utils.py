@@ -10,7 +10,8 @@ newpath = str(Path(sys.path[-1]).parent)
 sys.path.append(newpath)
 from baseline.dataloader import SpectrogramDataset
 
-DATA_PATH = Path(__file__).resolve().parent.parent.joinpath('DMLG/g2net/data_full')
+DATA_PATH = Path(__file__).resolve().parent.parent.parent.joinpath('DMLG/g2net/data_full')
+DEBUG_DATA_PATH = Path(__file__).resolve().parent.parent.parent.joinpath('DMLG/g2net/data_debug')
 
 def get_datetime_version():
     now = datetime.datetime.now()
@@ -70,25 +71,38 @@ def make_debug_data():
     sample_labels.to_csv(root.parent.joinpath('data_debug', 'labels.csv'), index=False, index_label=None)
 
 def examine_dataset_outputs():
-    train_data_path = DATA_PATH.joinpath('train')
-    labels_df_path = DATA_PATH.joinpath('training_labels.csv')
+    train_data_path = DEBUG_DATA_PATH
+    labels_df_path = DEBUG_DATA_PATH.joinpath('labels.csv')
     labels_df = pd.read_csv(labels_df_path)
 
-    ds = SpectrogramDataset(train_data_path, labels_df, rescale=[-1, 1], bandpass=[20, 500], return_time_series=True)
-    n = 1
+    ds = SpectrogramDataset(
+        train_data_path,
+        labels_df,
+        rescale=[-1, 1],
+        bandpass=[20, 500], 
+        return_time_series=True)
+
+    n = 5
 
     for i in range(n):
         spec, ts, label, filename = ds[i]
         og_ts = np.load(filename).astype(np.float32)
 
         plt.subplot(1, 2, 1)
-        x = list(range(len(og_ts.shape[1])))
-        plt.plot(x=x, y=og_ts)
+        x = list(range(og_ts.shape[1]))
+        plt.plot(x, og_ts[0, ...])
+        plt.title('original')
 
         plt.subplot(1, 2, 2)
-        plt.plot(x=x, y=ts)
+        plt.plot(x, ts[0, ...])
+        plt.title('bandpass_normalize')
 
-        plt.savefig(f'{Path(__file__).joinpath(f"rescale_bandpass_{i}")}')
+        output_path = Path(__file__).parent.joinpath(f"vis/rescale_bandpass_{i}.png")
+        output_path.parent.mkdir(exist_ok=True)
+
+        plt.suptitle(f'label: {label}, {filename.name}')
+        plt.savefig(output_path)
+        plt.clf()
 
 
 if __name__ == "__main__":

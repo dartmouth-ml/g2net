@@ -39,16 +39,16 @@ class LightningG2Net(pl.LightningModule):
                  scheduler_config):
         super(LightningG2Net, self).__init__()
 
-        self.reducer = Reducer()
+        # self.reducer = Reducer()
 
         self.resnet = self.configure_backbone(model_config.backbone,
                                               model_config.pretrain,
                                               num_classes=512)
 
-        self.aggregator = nn.LSTM(input_size=512, hidden_size=1024, num_layers=2, batch_first=True)
-        self.classification_head = nn.Sequential(nn.Linear(1024, 1024),
+        # self.aggregator = nn.LSTM(input_size=512, hidden_size=1024, num_layers=2, batch_first=True)
+        self.classification_head = nn.Sequential(nn.Linear(512, 512),
                                                  nn.SiLU(),
-                                                 nn.Linear(1024, 2))
+                                                 nn.Linear(512, 2))
     
         # hparams
         self.optimizer_config = optimizer_config
@@ -128,22 +128,22 @@ class LightningG2Net(pl.LightningModule):
                     "lr_scheduler": scheduler_dict}
 
     def forward(self, x):
-        b, c, m, t = x.shape
+        b, c, t, m = x.shape
 
-        reducer_outputs = []
-        for i in range(3):
-            part = einops.rearrange(x[:, i, ...], 'b m t -> b m 1 t')
-            reducer_outputs.append(self.reducer(part))
+        # reducer_outputs = []
+        # for i in range(3):
+        #     part = einops.rearrange(x[:, i, ...], 'b m t -> b m 1 t')
+        #     reducer_outputs.append(self.reducer(part))
         
-        x = torch.stack(reducer_outputs, dim=1).type_as(x)
-        x = einops.rearrange(x, 'b n c 1 t -> (b n) c 1 t', b=b, n=3, c=3)
-        
+        # x = torch.stack(reducer_outputs, dim=1).type_as(x)
+        # x = einops.rearrange(x, 'b n c 1 t -> (b n) c 1 t', b=b, n=3, c=3)
         x = self.resnet(x)
-        
         # aggregate
-        x = einops.rearrange(x, '(b n) d -> b n d', b=b, n=3)
-        _, (x, _) = self.aggregator(x)
-        x = self.classification_head(x[-1, ...]) # b, 2
+        # x = einops.rearrange(x, '(b n) d -> b n d', b=b, n=3)
+        # _, (x, _) = self.aggregator(x)
+        # x = self.classification_head(x[-1, ...]) # b, 2
+
+        x = self.classification_head(x)
 
         return x
     

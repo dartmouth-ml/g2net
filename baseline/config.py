@@ -2,11 +2,11 @@ from pathlib import Path
 from baseline.utils import get_datetime_version
 from ml_collections import ConfigDict
 
-PROJECT_ROOT = Path(__file__).parent
+PROJECT_ROOT = Path(__file__).parent.parent
 DATA_ROOT = PROJECT_ROOT.parent.joinpath('DMLG/g2net/data_full')
 
 config = ConfigDict()
-config.model_name = "expand_collate_v3"
+config.model_name = "baseline_rescale_bandpass"
 config.version = get_datetime_version()
 config.seed = 10
 
@@ -20,6 +20,8 @@ config.dataloader.val_ratio = 0.2
 config.dataloader.batch_size = 64
 config.dataloader.num_workers = 8
 config.dataloader.rescale = [-1, 1]
+config.dataloader.bandpass = [20, 500]
+config.dataloader.return_time_series = False
 
 config.model = ConfigDict()
 config.model.pretrain = False
@@ -42,8 +44,8 @@ config.logging.tags = [config.version]
 
 config.trainer = ConfigDict()
 config.trainer.accelerator = None
-config.trainer.gpus = 1 #1
-config.trainer.auto_select_gpus = True #True
+config.trainer.gpus = 0
+config.trainer.auto_select_gpus = False
 config.trainer.min_epochs = 0
 config.trainer.max_epochs = 200
 config.trainer.val_check_interval = 1000

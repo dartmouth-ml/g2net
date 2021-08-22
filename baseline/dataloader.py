@@ -7,12 +7,14 @@ from pathlib import Path
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
 from scipy.signal import butter, sosfilt
-from baseline.spectrogram import make_spectrogram
 
 from torch.utils.data import Dataset, DataLoader
+from torch.utils.data._utils.collate import default_collate
 from torchvision.transforms import ToTensor, Compose
+import einops
 
 from pytorch_lightning import LightningDataModule
+from baseline.spectrogram import make_spectrogram
 
 class SpectrogramDataset(Dataset):
     def __init__(self,
@@ -37,8 +39,17 @@ class SpectrogramDataset(Dataset):
             self.rescaler = MinMaxScaler(feature_range=rescale)
         
         self.bandpass = bandpass
-        if bandpass is not None:
-            self.bandpass_filter = butter(N=10, Wn=bandpass, btype='bandpass', output='sos', fs=4096)
+
+    def butter_bandpass(self, lowcut, highcut, fs, order=5):
+        nyq = 0.5 * fs
+        low = lowcut / nyq
+        high = highcut / nyq
+        sos = butter(N=order, Wn=[low, high], btype='bandpass', output='sos')
+        return sos
+
+    def butter_bandpass_filter(self, data, lowcut, highcut, fs, order=5):
+        sos = self.butter_bandpass(lowcut, highcut, fs, order=order)
+        return sosfilt(sos, data)
 
     def __getitem__(self, idx):
         """
@@ -50,17 +61,23 @@ class SpectrogramDataset(Dataset):
         time_series_data = np.load(full_path).astype(np.float32)
 
         # rescale
-        if self.rescale:
-            time_series_data = self.rescaler.fit_transform(np.expand_dims(time_series_data, axis=0))[0, ...]
-        
-        if self.bandpass:
-            time_series_data = sosfilt(self.bandpass_filter, time_series_data)
+        for i in range(time_series_data.shape[0]):
+            if self.rescale:
+                data = einops.rearrange(time_series_data[i, ...], 'n -> n 1')
+                rescaled = self.rescaler.fit_transform(data)
+                time_series_data[i, ...] = einops.rearrange(rescaled, 'n 1 -> n')
+            if self.bandpass:
+                time_series_data[i, ...] = self.butter_bandpass_filter(time_series_data[i, ...],
+                                                                        self.bandpass[0],
+                                                                        self.bandpass[1],
+                                                                        4096)
 
         spectrograms = make_spectrogram(time_series_data)
-        spectograms = np.stack(spectrograms, axis=0) # 3, n_mels, t
+        spectrograms = np.stack(spectrograms, axis=0) # 3, n_mels, t
 
         label = self.labels[idx]
-        spectrograms = self.transforms(spectograms)
+        if self.transforms is not None:
+            spectrograms = self.transforms(spectrograms)
 
         if self.return_time_series:
             return spectrograms, time_series_data, label, full_path
@@ -157,20 +174,38 @@ class G2NetDataModule(LightningDataModule):
         
         return {'train': train_dset, 'val': val_dset, 'test': test_dset}
 
+    def collate_fn(self, batch):
+        batch_outputs = zip(*batch)
+        if not self.config.return_time_series:
+            spectograms, labels, filenames = batch_outputs
+        else:
+            spectograms, _, labels, filenames = batch_outputs
+
+        spectograms_and_labels = list(zip(spectograms, labels))
+        spectograms_and_labels = default_collate(spectograms_and_labels)
+
+        spectorgrams = spectograms_and_labels[0]
+        labels = spectograms_and_labels[1]
+
+        return spectorgrams, labels, filenames
+
     def train_dataloader(self):
         return DataLoader(dataset=self.datasets['train'],
                           batch_size=self.config.batch_size,
                           shuffle=True,
-                          num_workers=self.config.num_workers)
+                          num_workers=self.config.num_workers,
+                          collate_fn=self.collate_fn)
     
     def val_dataloader(self):
         return DataLoader(dataset=self.datasets['val'],
-                        batch_size=self.config.batch_size,
-                        shuffle=False,
-                        num_workers=self.config.num_workers)
+                         batch_size=self.config.batch_size,
+                         shuffle=False,
+                         num_workers=self.config.num_workers,
+                         collate_fn=self.collate_fn)
     
     def predict_dataloader(self):
         return DataLoader(dataset=self.datasets['test'],
-                        batch_size=self.config.batch_size,
-                        shuffle=False,
-                        num_workers=self.config.num_workers)
+                          batch_size=self.config.batch_size,
+                          shuffle=False,
+                          num_workers=self.config.num_workers,
+                          collate_fn=self.collate_fn)
