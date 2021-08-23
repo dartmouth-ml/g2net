@@ -5,6 +5,7 @@ from pathlib import Path
 from sklearn.model_selection import train_test_split
 from spectrogram import make_spectrogram
 import einops
+import torch 
 
 from torch.utils.data import Dataset, DataLoader
 from torchvision.transforms import ToTensor, Compose, Normalize
@@ -85,7 +86,7 @@ class G2NetDataModule(LightningDataModule):
 
 
     def get_transforms(self):
-        train_transforms = Compose([ToTensor()])
+        train_transforms = Compose([self.time_shift(), self.spector_shift(), ToTensor()])
         val_transforms = Compose([ToTensor()])
 
         return {'train': train_transforms, 'val': val_transforms}
@@ -126,3 +127,17 @@ class G2NetDataModule(LightningDataModule):
                          batch_size=self.config.batch_size,
                          shuffle=False,
                          num_workers=self.config.num_workers)
+
+    def time_shift(self, img):
+        if self.config.time_shift:
+            P = img.shape[0]*torch.rand(1)
+            SHIFT = P.int32()
+            return torch.cat([img[-SHIFT:], img[:-SHIFT]], axis=0)
+        return img
+
+    def spector_shift(self, img):
+        if  self.config.spector_shift > 0:
+            P = img.shape[1]*torch.rand(1)
+            SHIFT = P.int32()
+            return torch.cat([img[:, -SHIFT:], img[:, :-SHIFT]], axis=1)
+        return img

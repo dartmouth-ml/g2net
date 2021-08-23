@@ -16,6 +16,7 @@ from torchvision.models import (
     resnet101,
     googlenet
 )
+from efficientnet_pytorch import EfficientNet
 from torch.optim.lr_scheduler import (
     ReduceLROnPlateau,
     StepLR,
@@ -62,6 +63,8 @@ class LightningG2Net(pl.LightningModule):
             return resnet101(pretrained=pretrained)
         elif backbone == 'googlenet':
             return googlenet(pretrained=pretrained)
+        elif backbone == 'efficientnet':
+            return EfficientNet.from_pretrained('efficientnet-b0')
         else:
             raise NotImplementedError(backbone)
 
