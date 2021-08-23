@@ -86,7 +86,7 @@ class G2NetDataModule(LightningDataModule):
 
 
     def get_transforms(self):
-        train_transforms = Compose([self.time_shift(), self.spector_shift(), ToTensor()])
+        train_transforms = Compose([TimeShift(self.config.time_shift), SpectorShift(self.config.time_shift), ToTensor()])
         val_transforms = Compose([ToTensor()])
 
         return {'train': train_transforms, 'val': val_transforms}
@@ -127,17 +127,26 @@ class G2NetDataModule(LightningDataModule):
                          batch_size=self.config.batch_size,
                          shuffle=False,
                          num_workers=self.config.num_workers)
+class TimeShift(object):
+    def __init__(self, apply_shift):
+        self.apply_shift = apply_shift
 
-    def time_shift(self, img):
-        if self.config.time_shift:
+    def __call__(self, img):
+        if self.apply_shift:
             P = img.shape[0]*torch.rand(1)
-            SHIFT = P.int32()
-            return torch.cat([img[-SHIFT:], img[:-SHIFT]], axis=0)
+            SHIFT = P.to(torch.int32)
+            return np.concatenate((img[-SHIFT:], img[:-SHIFT]), axis=0)
         return img
 
-    def spector_shift(self, img):
-        if  self.config.spector_shift > 0:
+class SpectorShift(object):
+    def __init__(self, apply_shift):
+        self.apply_shift = apply_shift
+
+    def __call__(self, img):
+        if self.apply_shift:
             P = img.shape[1]*torch.rand(1)
-            SHIFT = P.int32()
-            return torch.cat([img[:, -SHIFT:], img[:, :-SHIFT]], axis=1)
+            SHIFT = P.to(torch.int32)
+            return np.concatenate((img[:, -SHIFT:], img[:, :-SHIFT]), axis=1)
         return img
+
+    

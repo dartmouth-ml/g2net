@@ -22,13 +22,15 @@ config.dataloader.validation_labels_path = DATA_ROOT.joinpath("val_labels.csv")
 config.dataloader.val_ratio = 0.2
 config.dataloader.batch_size = 8
 config.dataloader.num_workers = 8
-config.dataloader.spect_type = 'mel'
 config.dataloader.time_shift = True
 config.dataloader.spector_shift = True
 
+config.spectrogram = ConfigDict()
+config.spectrogram.spect_type = 'cqt'
+
 config.model = ConfigDict()
 config.model.pretrain = True
-config.model.backbone = "efficientnet"
+config.model.backbone = "resnet18"
 config.model.loss_fn = 'CrossEntropy'
 
 config.optimizer = ConfigDict()

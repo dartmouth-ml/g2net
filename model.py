@@ -118,12 +118,6 @@ class LightningG2Net(pl.LightningModule):
         return combo_net
 
     def create_conv1d_net(self):
-        lay1_out = self.conv1d_lout(4096, 4, 4)
-        lay2_out = self.conv1d_lout(lay1_out,4,4)
-        lay3_out = self.conv1d_lout(lay2_out,4,4)
-        lay4_out = self.conv1d_lout(lay3_out,4,4)
-        lay5_out = self.conv1d_lout(lay4_out,4,4)
-        print(int(lay1_out))
         conv1d_net = nn.Sequential(
             nn.Conv1d(in_channels=3,out_channels=32,kernel_size=4, stride=4),
             nn.BatchNorm1d(num_features=32),
@@ -143,7 +137,6 @@ class LightningG2Net(pl.LightningModule):
             nn.Flatten(),
             nn.Linear(512,2)
         )
-        print(conv1d_net)
         return conv1d_net
     
     def conv1d_lout(self, lin, kernel_size, stride):

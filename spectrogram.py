@@ -5,14 +5,13 @@ from librosa.feature import melspectrogram
 from librosa.core import pseudo_cqt
 from config import config
 
-
 def make_spectrogram(time_series_data):
     '''Creates a MEL spectrogram.'''
     # Loop and make spectrogram
     spectrograms = []
 
     for i in range(3):
-        if config.spect_type == 'mel':
+        if config.spectrogram.spect_type == 'mel':
             norm_data = time_series_data[i] / max(time_series_data[i])  # TODO is this the way we want to normalize?
 
             # Compute a mel-scaled spectrogram.
@@ -21,7 +20,12 @@ def make_spectrogram(time_series_data):
             # Convert a power spectrogram (amplitude squared) to decibel (dB) units
             spec = power_to_db(spec).transpose((1, 0))
             spectrograms.append(spec)
-        elif config.spect_type == 'pycbcq':
+        elif config.spectrogram.spect_type == 'cqt':
+            CQT = np.abs(pseudo_cqt(time_series_data[i],sr=10000,fmin=20))
+            print(CQT.shape)
+            spectrograms.append(CQT)
+
+        elif config.spectrogram.spect_type == 'pycbcq':
             #vec = time_series_data[i]
             #ts = pycbc.types.TimeSeries(vec, epoch=0, delta_t=1.0/2048) 
         
@@ -32,6 +36,7 @@ def make_spectrogram(time_series_data):
             #power -= power.min()
             #power /= power.max()
             #spectrograms.append(power)
+            raise NotImplementedError(config.spect_type)
         else:
             raise NotImplementedError(config.spect_type)
 
