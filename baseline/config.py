@@ -16,12 +16,14 @@ config.dataloader.all_labels_path = DATA_ROOT.joinpath("all_labels.csv")
 config.dataloader.training_labels_path = DATA_ROOT.joinpath("training_labels.csv")
 config.dataloader.validation_labels_path = DATA_ROOT.joinpath("validation_labels.csv")
 config.dataloader.test_labels_path = DATA_ROOT.joinpath("test_labels.csv")
+
 config.dataloader.val_ratio = 0.2
 config.dataloader.batch_size = 64
 config.dataloader.num_workers = 8
-config.dataloader.rescale = [-1, 1]
-config.dataloader.bandpass = [20, 500]
-config.dataloader.do_tukey = True
+
+config.dataloader.rescale = None
+config.dataloader.bandpass = None
+config.dataloader.do_tukey = False
 config.dataloader.return_time_series = False
 
 config.model = ConfigDict()
@@ -37,7 +39,7 @@ config.scheduler = ConfigDict()
 config.scheduler.name = "CosineAnnealing"
 
 config.logging = ConfigDict()
-config.logging.use_wandb = True
+config.logging.use_wandb = False
 config.logging.project = 'g2net'
 config.logging.entity = 'dmlg'
 config.logging.tags = [config.version]

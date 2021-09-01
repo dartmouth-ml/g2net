@@ -9,6 +9,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
 from scipy.signal import butter, sosfilt
 
+import torch
 from torch.utils.data import Dataset, DataLoader
 from torch.utils.data._utils.collate import default_collate
 from torchvision.transforms import ToTensor, Compose
@@ -17,13 +18,15 @@ import einops
 from pytorch_lightning import LightningDataModule
 from baseline.spectrogram import make_spectrogram
 
+torch.multiprocessing.set_sharing_strategy('file_system')
+
 class SpectrogramDataset(Dataset):
     def __init__(self,
                  data_path: Path,
                  labels_df: pd.DataFrame,
                  rescale: Union[List[float], None] = None,
                  bandpass: Union[List[float], None] = None,
-                 do_tukey=True,
+                 do_tukey: bool = True,
                  return_time_series: bool = False,
                  transforms=None):
         super().__init__()
@@ -84,6 +87,7 @@ class SpectrogramDataset(Dataset):
                                                                         4096)
         spectrograms = make_spectrogram(time_series_data)
         spectrograms = np.stack(spectrograms, axis=0) # 3, n_mels, t
+        raise ValueError(spectrograms.shape)
 
         label = self.labels[idx]
         if self.transforms is not None:
