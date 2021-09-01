@@ -7,10 +7,9 @@ from librosa.feature import melspectrogram
 from nnAudio.Spectrogram import CQT1992v2
 
 
+# The baseline spectrogram method (mel). Don't mess with this one.
 # TODO test if it's faster to make all spectrograms ahead of time (avoid repeat computation)
 def make_spectrogram(time_series_data):
-    '''Creates a MEL spectrogram.'''
-    # Loop and make spectrogram
     spectrograms = []
 
     for i in range(3):
@@ -26,7 +25,26 @@ def make_spectrogram(time_series_data):
     return torch.stack(spectrograms)
 
 
-def make_spectrogram_2(time_series_data):
+# Generic mel spectrogram method. Takes in a variety of (optional) parameters.
+#   "time_series_data" - 3 x 2048 numpy array
+def spectrogram_mel(time_series_data, sr=4096, n_mels=128, fmin=20, fmax=2048):
+    spectrograms = []
+
+    for i in range(3):
+        norm_data = time_series_data[i] / max(time_series_data[i])
+
+        # Compute a mel-scaled spectrogram
+        spec = melspectrogram(norm_data, sr=sr, n_mels=n_mels, fmin=fmin, fmax=fmax)
+
+        # Convert a power spectrogram (amplitude squared) to decibel (dB) units
+        spec = power_to_db(spec).transpose((1, 0))
+        spectrograms.append(torch.from_numpy(spec))
+
+    return torch.stack(spectrograms)
+
+
+
+def spectrogram_CQT(time_series_data):
     '''Transforms the np_file into spectrogram.'''
     TRANSFORM = CQT1992v2(sr=2048, fmin=20,
                           fmax=1024, hop_length=32,
@@ -41,24 +59,6 @@ def make_spectrogram_2(time_series_data):
 
         channel = TRANSFORM(norm_data).squeeze()
         spectrograms.append(channel)
-
-    return torch.stack(spectrograms)
-
-
-def make_spectrogram_3(time_series_data):
-    '''Creates a MEL spectrogram.'''
-    # Loop and make spectrogram
-    spectrograms = []
-
-    for i in range(3):
-        norm_data = time_series_data[i] / max(time_series_data[i])
-
-        # Compute a mel-scaled spectrogram.
-        spec = melspectrogram(norm_data, sr=4096, n_mels=64, fmin=20, fmax=2048)
-
-        # Convert a power spectrogram (amplitude squared) to decibel (dB) units
-        spec = power_to_db(spec).transpose((1, 0))
-        spectrograms.append(torch.from_numpy(spec))
 
     return torch.stack(spectrograms)
 
@@ -113,12 +113,8 @@ def visualize_spectrogram(spect, name='my_plot'):
 
 
 if __name__ == '__main__':
-    inputA = np.load(Path.cwd().joinpath('data', 'train', '7', '7', '7', '777a1e4add.npy'))
-    # spect = make_spectrogram(inputA)
-    # visualize_spectrogram(spect, 'method_1')
-    #
-    # spect = make_spectrogram_2(inputA)
-    # visualize_spectrogram(spect, 'method_2')
+    inputA = np.load(Path.cwd().joinpath('data_full', '0', '0', '4', '004122364.npy'))
 
-    spect = make_spectrogram_3(inputA)
-    visualize_spectrogram(spect, 'method_3')
+    spect = spectrogram_mel(inputA)
+
+    visualize_spectrogram(spect, 'mel_)
