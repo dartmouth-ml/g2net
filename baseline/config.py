@@ -37,6 +37,7 @@ config.optimizer.learning_rate = 1e-3
 
 config.scheduler = ConfigDict()
 config.scheduler.name = "CosineAnnealing"
+config.scheduler.interval = 'step'
 
 config.logging = ConfigDict()
 config.logging.use_wandb = False

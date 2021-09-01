@@ -22,6 +22,7 @@ import einops
 from pytorch_lightning import LightningDataModule
 from common.spectrogram import get_spectogram
 
+# fixes pytorch error "too many open files"
 torch.multiprocessing.set_sharing_strategy('file_system')
 
 class SpectrogramDataset(Dataset):
@@ -147,55 +148,46 @@ class G2NetDataModule(LightningDataModule):
         train_df.to_csv(self.config.training_labels_path)
         val_df.to_csv(self.config.validation_labels_path)
 
-    def get_transforms(self):
+    def get_transforms(self) -> Dict:
         train_transforms = Compose([ToTensor()])
         val_transforms = Compose([ToTensor()])
 
         return {'train': train_transforms, 'val': val_transforms}
 
-    def get_datasets(self):
-        train_dset = None
-        val_dset = None
-        test_dset = None
-
-        train_df = None
-        val_df = None
-        test_df = None
+    def get_datasets(self) -> Dict:
+        datasets = {}
+        label_dfs = {
+            'train': None,
+            'val': None,
+            'test': None
+        }
 
         if self.config.training_labels_path.is_file():
-            train_df = pd.read_csv(self.config.training_labels_path)
+            label_dfs['train'] = pd.read_csv(self.config.training_labels_path)
         
         if self.config.validation_labels_path.is_file():
-            val_df = pd.read_csv(self.config.validation_labels_path)
+            label_dfs['val'] = pd.read_csv(self.config.validation_labels_path)
         
         if self.config.test_labels_path.is_file():
-            test_df = pd.read_csv(self.config.test_labels_path)
+            label_dfs['test'] = pd.read_csv(self.config.test_labels_path)
+
+        for split in ['train', 'val', 'test']:
+            dataset_kwargs = {
+                'data_path': self.config.data_path.joinpath('train'),
+                'labels_df': label_dfs[split],
+                'spec_type': self.config.spec_type,
+                'rescale': self.config.rescale,
+                'bandpass': self.config.bandpass,
+                'return_time_series': self.config.return_time_series,
+                'transforms': self.transforms[split]
+            }
+
+            if label_dfs[split] is not None:
+                datasets[split] = SpectrogramDataset(**dataset_kwargs)
+            else:
+                datasets[split] = None
         
-        if train_df is not None:
-            train_dset = SpectrogramDataset(self.config.data_path.joinpath('train'),
-                                            labels_df=train_df,
-                                            rescale=self.config.rescale,
-                                            bandpass=self.config.bandpass,
-                                            do_tukey=self.config.do_tukey,
-                                            transforms=self.transforms['train'])
-                    
-        if val_df is not None:
-            val_dset = SpectrogramDataset(self.config.data_path.joinpath('train'),
-                                          labels_df=val_df,
-                                          rescale=self.config.rescale,
-                                          bandpass=self.config.bandpass,
-                                          do_tukey=self.config.do_tukey,
-                                          transforms=self.transforms['val'])
-        
-        if test_df is not None:
-            test_dset = SpectrogramDataset(self.config.data_path.joinpath('test'),
-                                           labels_df=test_df,
-                                           rescale=self.config.rescale,
-                                           bandpass=self.config.bandpass,
-                                           do_tukey=self.config.do_tukey,
-                                           transforms=self.transforms['val'])
-        
-        return {'train': train_dset, 'val': val_dset, 'test': test_dset}
+        return datasets
 
     def collate_fn(self, batch):
         batch_outputs = zip(*batch)

@@ -36,7 +36,8 @@ class LightningG2Net(pl.LightningModule):
     def __init__(self,
                  model_config,
                  optimizer_config,
-                 scheduler_config):
+                 scheduler_config,
+                 trainer_config):
         super(LightningG2Net, self).__init__()
 
         # self.reducer = Reducer()
@@ -54,6 +55,8 @@ class LightningG2Net(pl.LightningModule):
         self.optimizer_config = optimizer_config
         self.scheduler_config = scheduler_config
         self.model_config = model_config
+        self.trainer_config = trainer_config
+
         self.loss_fn = self.configure_loss_fn()
 
         # metrics
@@ -89,7 +92,7 @@ class LightningG2Net(pl.LightningModule):
         else:
             raise NotImplementedError(self.model_config.loss_fn )
 
-    def configure_lr_schedulers(self, optimizer, scheduler_config):
+    def configure_lr_schedulers(self, optimizer, scheduler_config, trainer_config):
         if scheduler_config is None:
             return None
         
@@ -102,24 +105,32 @@ class LightningG2Net(pl.LightningModule):
                                scheduler_config.gamma)
         
         elif scheduler_config.name == 'CosineAnnealing':
-            scheduler = CosineAnnealingLR(optimizer, T_max=len(self.train_dataloader()))
+            n_steps = len(self.train_dataloader())*trainer_config.max_epochs
+            scheduler = CosineAnnealingLR(optimizer, T_max=n_steps)
 
         elif scheduler_config is not None:
             raise NotImplementedError(scheduler_config.name)
         
-        monitor = scheduler_config.get('monitor', None)
+        scheduler_dict = {
+            'scheduler': scheduler,
+            'interval': scheduler_config.interval,
+        }
 
-        if monitor is None:
-            return {'scheduler': scheduler}
-        return {'scheduler': scheduler, 'monitor': scheduler_config.monitor}
+        if scheduler_config.monitor is not None:
+            scheduler_dict['monitor'] = scheduler_config.monitor
+
+        return scheduler_dict
 
     def configure_optimizers(self):
         if self.optimizer_config.name == 'Adam':
-            optimizer = torch.optim.Adam(self.parameters(), self.optimizer_config.learning_rate)
+            optimizer = torch.optim.Adam(params=self.parameters(),
+                                         lr=self.optimizer_config.learning_rate)
         else:
             raise NotImplementedError(self.optimizer_config.name)
         
-        scheduler_dict = self.configure_lr_schedulers(optimizer, self.scheduler_config)
+        scheduler_dict = self.configure_lr_schedulers(optimizer,
+                                                      self.scheduler_config,
+                                                      self.trainer_config)
 
         if scheduler_dict is None:
             return optimizer

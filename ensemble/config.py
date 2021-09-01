@@ -12,12 +12,12 @@ config.seed = 10
 
 config.dataloader = ConfigDict()
 config.dataloader.train_submissions = [
-    PROJECT_ROOT.joinpath('ensemble/submissions/baseline_train_sub.csv'),
-    PROJECT_ROOT.joinpath('ensemble/submissions/bigmel_train_sub.csv'),
+    PROJECT_ROOT.parent.joinpath('DMLG/g2net/submissions/baseline/submission_train.csv'),
+    PROJECT_ROOT.parent.joinpath('DMLG/g2net/submissions/bigmel/submission_train.csv'),
 ]
 config.dataloader.val_submissions = [
-    PROJECT_ROOT.joinpath('ensemble/submissions/baseline_val_sub.csv'),
-    PROJECT_ROOT.joinpath('ensemble/submissions/bigmel_val_sub.csv'),
+    PROJECT_ROOT.parent.joinpath('DMLG/g2net/submissions/baseline/submission_val.csv'),
+    PROJECT_ROOT.parent.joinpath('DMLG/g2net/submissions/bigmel/submission_val.csv'),
 ]
 config.dataloader.batch_size = 64
 config.dataloader.num_workers = 8
