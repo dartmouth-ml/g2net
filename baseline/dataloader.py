@@ -1,4 +1,9 @@
-from typing import List, Union, Dict
+from typing import (
+    List, 
+    Union, 
+    Dict
+)
+
 from functools import partial
 import pandas as pd
 import numpy as np
