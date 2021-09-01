@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 from pathlib import Path
 
 """
@@ -20,7 +21,8 @@ def wills_ensembler(folder, submissions, weights, output_name):
         print("Error: at least one weight must be nonzero")
 
     if sum(weights) != 1:
-        weights = weights / sum(weights)
+        print("Weights don't sum to 1. Normalizing...")
+        weights = np.array(weights) / sum(weights)
 
     dfs = [pd.read_csv(folder.joinpath(submissions[i])) for i in range(n)]
     weighted_dfs = [dfs[i]["target"] * weights[i] for i in range(n)]
@@ -34,8 +36,8 @@ def wills_ensembler(folder, submissions, weights, output_name):
 if __name__ == '__main__':
     folder = Path.cwd().joinpath('submissions')
     submissions = ['submission_baseline.csv', 'submission_bigmel.csv']
-    weights = [1, 0]
-    output_name = "output.csv"
+    weights = [0.5, 0.5]
+    output_name = "output2.csv"
 
     wills_ensembler(folder, submissions, weights, output_name)
 
