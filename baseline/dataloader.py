@@ -1,6 +1,5 @@
-from typing import List, Union
-
-from math import cos
+from typing import List, Union, Dict
+from functools import partial
 import pandas as pd
 import numpy as np
 from pathlib import Path
@@ -16,7 +15,7 @@ from torchvision.transforms import ToTensor, Compose
 import einops
 
 from pytorch_lightning import LightningDataModule
-from baseline.spectrogram import make_spectrogram
+from common.spectrogram import get_spectogram
 
 torch.multiprocessing.set_sharing_strategy('file_system')
 
@@ -24,72 +23,75 @@ class SpectrogramDataset(Dataset):
     def __init__(self,
                  data_path: Path,
                  labels_df: pd.DataFrame,
-                 rescale: Union[List[float], None] = None,
-                 bandpass: Union[List[float], None] = None,
-                 do_tukey: bool = True,
+                 spec_type: str = 'mel',
+                 spec_kwargs: Dict = {},
+                 rescale: Union[List, None] = None,
+                 bandpass: Union[List, None] = None,
                  return_time_series: bool = False,
                  transforms=None):
         super().__init__()
+
         self.time_series_path = data_path
+        self.spec_type = spec_type
+        self.spec_kwargs = spec_kwargs
 
         self.file_names = labels_df['id'].tolist()
         self.labels = np.array(labels_df['target'].tolist())
 
         self.return_time_series = return_time_series
         self.transforms = transforms
-        self.rescale = rescale
         self.file_ext = '.npy'
-
-        if self.rescale is not None:
-            self.rescaler = MinMaxScaler(feature_range=rescale)
         
-        self.do_tukey = do_tukey
-        self.bandpass = bandpass
+        self.preprocess_fns = []
+        if rescale is not None:
+            self.rescaler = MinMaxScaler(feature_range=rescale)
+            self.preprocess_fns.append(partial(self.rescale_fn,
+                                               rescaler=MinMaxScaler(feature_range=rescale)))
+        if bandpass is not None:
+            self.preprocess_fns.append(partial(self.bandpass_fn,
+                                               lowcut=bandpass[0],
+                                               highcut=bandpass[1],
+                                               fs=4096,
+                                               order=5))
 
-    def butter_bandpass_filter(self, data, lowcut, highcut, fs, order=5):
+    def preprocess(self, time_series_data):
+        for i in range(time_series_data.shape[0]):
+            for fn in self.preprocess_fns:
+                time_series_data[i, ...] = fn(time_series_data[i, ...])
+
+        return time_series_data
+    
+    def bandpass_fn(self, time_series_data, lowcut, highcut, fs, order=5):
         nyq = 0.5 * fs
         low = lowcut / nyq
         high = highcut / nyq
-        sos = butter(N=order, Wn=[low, high], btype='bandpass', output='sos')
-        return sosfilt(sos, data)
-    
-    def tukey_fn(self, size, alpha, dtype):
-        window = np.zeros((size,), dtype=dtype)
-        for n in range(size // 2 + 1):
-            if n < alpha * size / 2:
-                window[n] = window[-n] = 1 / 2 * (1 - cos(2 * 3.14 * n / (size * alpha)))
-            else:
-                window[n] = window[-n] = 1
-        return window
 
+        sos = butter(N=order, Wn=[low, high], btype='bandpass', output='sos')
+        return sosfilt(sos, time_series_data)
+
+    def rescale_fn(self, time_series_data, rescaler):
+        data = einops.rearrange(time_series_data, 'n -> n 1')
+        rescaled = rescaler.fit_transform(data)
+        time_series_data = einops.rearrange(rescaled, 'n 1 -> n')
+
+        return time_series_data
+    
     def __getitem__(self, idx):
-        """
-        spectrogram -- (currently) 9 x 128 color image
-        label -- 0 or 1
-        """
         file_name = self.file_names[idx]
         full_path = self.convert_to_full_path(file_name)
-        time_series_data = np.load(full_path).astype(np.float32)
 
-        # rescale
-        for i in range(time_series_data.shape[0]):
-            if self.rescale:
-                data = einops.rearrange(time_series_data[i, ...], 'n -> n 1')
-                rescaled = self.rescaler.fit_transform(data)
-                time_series_data[i, ...] = einops.rearrange(rescaled, 'n 1 -> n')
-            if self.do_tukey:
-                tukey = self.tukey_fn(time_series_data.shape[-1], 0.2, time_series_data.dtype)
-                time_series_data[i, ...] *= tukey
-            if self.bandpass:
-                time_series_data[i, ...] = self.butter_bandpass_filter(time_series_data[i, ...],
-                                                                        self.bandpass[0],
-                                                                        self.bandpass[1],
-                                                                        4096)
-        spectrograms = make_spectrogram(time_series_data)
-        spectrograms = np.stack(spectrograms, axis=0) # 3, n_mels, t
-        raise ValueError(spectrograms.shape)
+        # load and preprocess on time domain (rescaling + bandpassing)
+        time_series_data = np.load(full_path).astype(np.float32)
+        time_series_data = self.preprocess(time_series_data)
+
+        # time -> frequency
+        spectrograms = get_spectogram(time_series_data,
+                                      self.spec_type,
+                                      window=self.window)
 
         label = self.labels[idx]
+
+        # data augmentation + (np -> tensor)
         if self.transforms is not None:
             spectrograms = self.transforms(spectrograms)
 
@@ -101,7 +103,6 @@ class SpectrogramDataset(Dataset):
     def convert_to_full_path(self, file_name):
         full_path = self.time_series_path.joinpath(*[s for s in file_name[:3]], file_name).with_suffix(self.file_ext)
         assert full_path.is_file(), full_path
-
         return full_path
 
     def __len__(self):
@@ -206,23 +207,26 @@ class G2NetDataModule(LightningDataModule):
 
         return spectorgrams, labels, filenames
 
+    def get_dataloader(self, mode='train'):
+        shuffle = False
+        if mode == 'train':
+            shuffle = True
+        
+        dataloader_kwargs = {
+            "dataset": self.datasets['mode'],
+            "batch_size": self.config.batch_size,
+            "shuffle": shuffle,
+            "num_workers": self.config.num_workers,
+            "collate_fn": self.collate_fn
+        }
+
+        return DataLoader(**dataloader_kwargs)
+    
     def train_dataloader(self):
-        return DataLoader(dataset=self.datasets['train'],
-                          batch_size=self.config.batch_size,
-                          shuffle=True,
-                          num_workers=self.config.num_workers,
-                          collate_fn=self.collate_fn)
+        return self.get_dataloader('train')
     
     def val_dataloader(self):
-        return DataLoader(dataset=self.datasets['val'],
-                         batch_size=self.config.batch_size,
-                         shuffle=False,
-                         num_workers=self.config.num_workers,
-                         collate_fn=self.collate_fn)
+        return self.get_dataloader('val')
     
     def predict_dataloader(self):
-        return DataLoader(dataset=self.datasets['test'],
-                          batch_size=self.config.batch_size,
-                          shuffle=False,
-                          num_workers=self.config.num_workers,
-                          collate_fn=self.collate_fn)
+        return self.get_dataloader('test')
