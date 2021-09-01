@@ -116,8 +116,9 @@ class LightningG2Net(pl.LightningModule):
             'interval': scheduler_config.interval,
         }
 
-        if scheduler_config.monitor is not None:
-            scheduler_dict['monitor'] = scheduler_config.monitor
+        monitor = scheduler_config.get('monitor', None)
+        if monitor is not None:
+            scheduler_dict['monitor'] = monitor
 
         return scheduler_dict
 

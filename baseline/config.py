@@ -21,9 +21,17 @@ config.dataloader.val_ratio = 0.2
 config.dataloader.batch_size = 64
 config.dataloader.num_workers = 8
 
-config.dataloader.rescale = None
-config.dataloader.bandpass = None
-config.dataloader.do_tukey = False
+config.dataloader.spec_type = 'mel'
+config.dataloader.spec_kwargs = {
+    'window': ('tukey', 4096),
+    "sr": 4096,
+    "n_mels": 128,
+    "fmin": 20,
+    "fmax": 2048
+}
+
+config.dataloader.rescale = [-1, 1]
+config.dataloader.bandpass = [20, 500]
 config.dataloader.return_time_series = False
 
 config.model = ConfigDict()
@@ -58,9 +66,9 @@ config.trainer.deterministic = False
 
 config.checkpoint = ConfigDict()
 config.checkpoint.save_checkpoint = True
-config.checkpoint.save_dir = PROJECT_ROOT.joinpath('checkpoints',
-                                                   config.model_name,
-                                                   config.version)
+config.checkpoint.save_dir = DATA_ROOT.parent.joinpath('checkpoints',
+                                                        config.model_name,
+                                                        config.version)
 config.checkpoint.monitor = 'val/AUROC'
 config.checkpoint.monitor_mode = 'max'
 config.checkpoint.save_last = True
@@ -68,7 +76,7 @@ config.checkpoint.save_top_k = 3
 config.checkpoint.every_n_steps = 1000
 
 config.early_stopping = ConfigDict()
+config.early_stopping.early_stop = False
 config.early_stopping.monitor = 'val/loss'
-config.early_stopping.stop_early = True
 config.early_stopping.min_delta = 0
 config.early_stopping.patience = 10

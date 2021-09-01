@@ -93,7 +93,7 @@ class SpectrogramDataset(Dataset):
         # time -> frequency
         spectrograms = get_spectogram(time_series_data,
                                       self.spec_type,
-                                      window=self.window)
+                                      **self.spec_kwargs)
 
         label = self.labels[idx]
 
@@ -152,7 +152,9 @@ class G2NetDataModule(LightningDataModule):
         train_transforms = Compose([ToTensor()])
         val_transforms = Compose([ToTensor()])
 
-        return {'train': train_transforms, 'val': val_transforms}
+        return {'train': train_transforms,
+                'val': val_transforms,
+                'test': val_transforms}
 
     def get_datasets(self) -> Dict:
         datasets = {}
@@ -176,6 +178,7 @@ class G2NetDataModule(LightningDataModule):
                 'data_path': self.config.data_path.joinpath('train'),
                 'labels_df': label_dfs[split],
                 'spec_type': self.config.spec_type,
+                'spec_kwargs': self.config.spec_kwargs,
                 'rescale': self.config.rescale,
                 'bandpass': self.config.bandpass,
                 'return_time_series': self.config.return_time_series,
@@ -191,6 +194,7 @@ class G2NetDataModule(LightningDataModule):
 
     def collate_fn(self, batch):
         batch_outputs = zip(*batch)
+
         if not self.config.return_time_series:
             spectograms, labels, filenames = batch_outputs
         else:
@@ -210,7 +214,7 @@ class G2NetDataModule(LightningDataModule):
             shuffle = True
         
         dataloader_kwargs = {
-            "dataset": self.datasets['mode'],
+            "dataset": self.datasets[mode],
             "batch_size": self.config.batch_size,
             "shuffle": shuffle,
             "num_workers": self.config.num_workers,

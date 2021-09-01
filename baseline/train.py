@@ -28,7 +28,7 @@ if config.checkpoint.save_checkpoint:
                                      save_top_k=config.checkpoint.save_top_k,
                                      every_n_train_steps=config.checkpoint.every_n_steps))
 
-if config.early_stopping.stop_early:
+if config.early_stopping.early_stop:
     callbacks.append(EarlyStopping(monitor=config.early_stopping.monitor, 
                                    min_delta=config.early_stopping.min_delta, 
                                    patience=config.early_stopping.patience))
@@ -52,8 +52,11 @@ trainer = pl.Trainer(
     deterministic=config.trainer.deterministic,
 )
 
-model = LightningG2Net(config.model, config.optimizer, config.scheduler)
+model = LightningG2Net(config.model,
+                       config.optimizer,
+                       config.scheduler,
+                       config.trainer)
+
 datamodule = G2NetDataModule(config.dataloader)
-datamodule.setup()
 
 trainer.fit(model, datamodule=datamodule)
