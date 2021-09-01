@@ -48,7 +48,7 @@ config.scheduler.name = "CosineAnnealing"
 config.scheduler.interval = 'step'
 
 config.logging = ConfigDict()
-config.logging.use_wandb = False
+config.logging.use_wandb = True
 config.logging.project = 'g2net'
 config.logging.entity = 'dmlg'
 config.logging.tags = [config.version]
@@ -61,7 +61,7 @@ config.trainer.min_epochs = 0
 config.trainer.max_epochs = 200
 config.trainer.val_check_interval = 1000
 config.trainer.resume_from_checkpoint = None
-config.trainer.fast_dev_run = True
+config.trainer.fast_dev_run = False
 config.trainer.deterministic = False
 
 config.checkpoint = ConfigDict()

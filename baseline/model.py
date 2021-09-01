@@ -21,7 +21,8 @@ from torch.optim.lr_scheduler import (
     CosineAnnealingLR,
 )
 import einops
-from losses import ROCStarLoss
+from common import model_fns
+from common.losses import ROCStarLoss
 
 class Reducer(nn.Module):
     def __init__(self):
@@ -83,61 +84,15 @@ class LightningG2Net(pl.LightningModule):
             raise NotImplementedError(backbone)
 
     def configure_loss_fn(self):
-        if self.model_config.loss_fn == 'CrossEntropy':
-            return nn.CrossEntropyLoss(weight=None)
-        
-        elif self.model_config.loss_fn == 'ROC_Star':
-            return ROCStarLoss()
-        
-        else:
-            raise NotImplementedError(self.model_config.loss_fn )
-
-    def configure_lr_schedulers(self, optimizer, scheduler_config, trainer_config):
-        if scheduler_config is None:
-            return None
-        
-        if scheduler_config.name == 'ReduceLROnPlateau':
-            scheduler = ReduceLROnPlateau(optimizer)
-        
-        elif scheduler_config.name == 'StepLR':
-            scheduler = StepLR(optimizer, 
-                               scheduler_config.step_size,
-                               scheduler_config.gamma)
-        
-        elif scheduler_config.name == 'CosineAnnealing':
-            n_steps = len(self.train_dataloader())*trainer_config.max_epochs
-            scheduler = CosineAnnealingLR(optimizer, T_max=n_steps)
-
-        elif scheduler_config is not None:
-            raise NotImplementedError(scheduler_config.name)
-        
-        scheduler_dict = {
-            'scheduler': scheduler,
-            'interval': scheduler_config.interval,
-        }
-
-        monitor = scheduler_config.get('monitor', None)
-        if monitor is not None:
-            scheduler_dict['monitor'] = monitor
-
-        return scheduler_dict
+        return model_fns.configure_loss_fn(self.model_config.loss_fn)
 
     def configure_optimizers(self):
-        if self.optimizer_config.name == 'Adam':
-            optimizer = torch.optim.Adam(params=self.parameters(),
-                                         lr=self.optimizer_config.learning_rate)
-        else:
-            raise NotImplementedError(self.optimizer_config.name)
-        
-        scheduler_dict = self.configure_lr_schedulers(optimizer,
-                                                      self.scheduler_config,
-                                                      self.trainer_config)
-
-        if scheduler_dict is None:
-            return optimizer
-        else:
-            return {"optimizer": optimizer, 
-                    "lr_scheduler": scheduler_dict}
+        n_steps_per_epoch = len(self.train_dataloader())
+        return model_fns.configure_optimizers(self.parameters(),
+                                              self.optimizer_config,
+                                              self.scheduler_config,
+                                              self.trainer_config,
+                                              n_steps_per_epoch)
 
     def forward(self, x):
         b, c, t, m = x.shape
