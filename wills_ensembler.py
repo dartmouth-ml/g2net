@@ -28,11 +28,13 @@ def wills_ensembler(folder, submissions, weights, output_name):
         weights = np.array(weights) / sum(weights)
         print(f"New weights: {weights}")
 
-    dfs = [pd.read_csv(folder.joinpath(submissions[i])) for i in range(n)]
-    weighted_target = sum([dfs[i]["target"] * weights[i] for i in range(n)])
+    paths = [folder.joinpath(submissions[i]) for i in range(n)]
+    dfs = [pd.read_csv(paths[i]).sort_values('id') for i in range(n)]
+    targets = [np.array(dfs[i]['target'].to_list()) for i in range(n)]
+    weighted_targets = np.sum([targets[i] * weights[i] for i in range(n)], axis=0)
 
     new_submission = dfs[0].copy()
-    new_submission["target"] = weighted_target
+    new_submission["target"] = weighted_targets
     new_submission.to_csv(folder.joinpath(output_name), index=False)
 
 
@@ -47,9 +49,20 @@ if __name__ == '__main__':
                    'submission_864.csv',
                    'submission_866.csv',
                    'submission_869.csv']
+    # submissions = ['submission_baseline.csv',
+    #                'submission_869.csv']
     weights = [0.01, 0.03, 0.03, 0.05, 0.08, 0.1, 0.12, 0.16, 0.42]
-    # print(sum(weights))
+    # weights = [0.5, 0.5]
+
     output_name = "custom_ensemble.csv"
 
     wills_ensembler(folder, submissions, weights, output_name)
 
+# if __name__ == '__main__':
+#     folder = Path.cwd().joinpath('submissions')
+#     path = folder.joinpath('submission_869.csv')
+#     df = pd.read_csv(path)
+#     df2 = pd.read_csv(path).sort_values('id')
+#     print(df["target"][0:10])
+#     print(df2["target"][0:10])
+#     print(0.5 * np.array(df["target"][0:10].to_list()) + 0.5 * np.array(df2["target"][0:10].to_list()))
