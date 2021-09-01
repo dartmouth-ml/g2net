@@ -6,7 +6,7 @@ PROJECT_ROOT = Path(__file__).parent.parent
 DATA_ROOT = PROJECT_ROOT.parent.joinpath('DMLG/g2net/data_full')
 
 config = ConfigDict()
-config.model_name = "baseline_rescale_bandpass"
+config.model_name = "baseline_rescale_bandpass_tukey"
 config.version = get_datetime_version()
 config.seed = 10
 
@@ -21,13 +21,13 @@ config.dataloader.batch_size = 64
 config.dataloader.num_workers = 8
 config.dataloader.rescale = [-1, 1]
 config.dataloader.bandpass = [20, 500]
+config.dataloader.do_tukey = True
 config.dataloader.return_time_series = False
 
 config.model = ConfigDict()
 config.model.pretrain = False
 config.model.backbone = "resnet18"
 config.model.loss_fn = 'CrossEntropy'
-config.model.bandpass = [20, 500]
 
 config.optimizer = ConfigDict()
 config.optimizer.name = "Adam"

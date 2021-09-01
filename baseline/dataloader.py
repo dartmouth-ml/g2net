@@ -1,5 +1,6 @@
 from typing import List, Union
 
+from math import cos
 import pandas as pd
 import numpy as np
 from pathlib import Path
@@ -22,6 +23,7 @@ class SpectrogramDataset(Dataset):
                  labels_df: pd.DataFrame,
                  rescale: Union[List[float], None] = None,
                  bandpass: Union[List[float], None] = None,
+                 do_tukey=True,
                  return_time_series: bool = False,
                  transforms=None):
         super().__init__()
@@ -38,18 +40,24 @@ class SpectrogramDataset(Dataset):
         if self.rescale is not None:
             self.rescaler = MinMaxScaler(feature_range=rescale)
         
+        self.do_tukey = do_tukey
         self.bandpass = bandpass
 
-    def butter_bandpass(self, lowcut, highcut, fs, order=5):
+    def butter_bandpass_filter(self, data, lowcut, highcut, fs, order=5):
         nyq = 0.5 * fs
         low = lowcut / nyq
         high = highcut / nyq
         sos = butter(N=order, Wn=[low, high], btype='bandpass', output='sos')
-        return sos
-
-    def butter_bandpass_filter(self, data, lowcut, highcut, fs, order=5):
-        sos = self.butter_bandpass(lowcut, highcut, fs, order=order)
         return sosfilt(sos, data)
+    
+    def tukey_fn(self, size, alpha, dtype):
+        window = np.zeros((size,), dtype=dtype)
+        for n in range(size // 2 + 1):
+            if n < alpha * size / 2:
+                window[n] = window[-n] = 1 / 2 * (1 - cos(2 * 3.14 * n / (size * alpha)))
+            else:
+                window[n] = window[-n] = 1
+        return window
 
     def __getitem__(self, idx):
         """
@@ -66,12 +74,14 @@ class SpectrogramDataset(Dataset):
                 data = einops.rearrange(time_series_data[i, ...], 'n -> n 1')
                 rescaled = self.rescaler.fit_transform(data)
                 time_series_data[i, ...] = einops.rearrange(rescaled, 'n 1 -> n')
+            if self.do_tukey:
+                tukey = self.tukey_fn(time_series_data.shape[-1], 0.2, time_series_data.dtype)
+                time_series_data[i, ...] *= tukey
             if self.bandpass:
                 time_series_data[i, ...] = self.butter_bandpass_filter(time_series_data[i, ...],
                                                                         self.bandpass[0],
                                                                         self.bandpass[1],
                                                                         4096)
-
         spectrograms = make_spectrogram(time_series_data)
         spectrograms = np.stack(spectrograms, axis=0) # 3, n_mels, t
 
@@ -156,6 +166,7 @@ class G2NetDataModule(LightningDataModule):
                                             labels_df=train_df,
                                             rescale=self.config.rescale,
                                             bandpass=self.config.bandpass,
+                                            do_tukey=self.config.do_tukey,
                                             transforms=self.transforms['train'])
                     
         if val_df is not None:
@@ -163,6 +174,7 @@ class G2NetDataModule(LightningDataModule):
                                           labels_df=val_df,
                                           rescale=self.config.rescale,
                                           bandpass=self.config.bandpass,
+                                          do_tukey=self.config.do_tukey,
                                           transforms=self.transforms['val'])
         
         if test_df is not None:
@@ -170,6 +182,7 @@ class G2NetDataModule(LightningDataModule):
                                            labels_df=test_df,
                                            rescale=self.config.rescale,
                                            bandpass=self.config.bandpass,
+                                           do_tukey=self.config.do_tukey,
                                            transforms=self.transforms['val'])
         
         return {'train': train_dset, 'val': val_dset, 'test': test_dset}

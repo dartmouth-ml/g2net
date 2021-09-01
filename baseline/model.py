@@ -129,20 +129,7 @@ class LightningG2Net(pl.LightningModule):
 
     def forward(self, x):
         b, c, t, m = x.shape
-
-        # reducer_outputs = []
-        # for i in range(3):
-        #     part = einops.rearrange(x[:, i, ...], 'b m t -> b m 1 t')
-        #     reducer_outputs.append(self.reducer(part))
-        
-        # x = torch.stack(reducer_outputs, dim=1).type_as(x)
-        # x = einops.rearrange(x, 'b n c 1 t -> (b n) c 1 t', b=b, n=3, c=3)
         x = self.resnet(x)
-        # aggregate
-        # x = einops.rearrange(x, '(b n) d -> b n d', b=b, n=3)
-        # _, (x, _) = self.aggregator(x)
-        # x = self.classification_head(x[-1, ...]) # b, 2
-
         x = self.classification_head(x)
 
         return x
