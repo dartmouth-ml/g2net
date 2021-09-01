@@ -55,13 +55,13 @@ config.logging.tags = [config.version]
 
 config.trainer = ConfigDict()
 config.trainer.accelerator = None
-config.trainer.gpus = 0
-config.trainer.auto_select_gpus = False
+config.trainer.gpus = 1
+config.trainer.auto_select_gpus = True
 config.trainer.min_epochs = 0
 config.trainer.max_epochs = 200
 config.trainer.val_check_interval = 1000
 config.trainer.resume_from_checkpoint = None
-config.trainer.fast_dev_run = False
+config.trainer.fast_dev_run = True
 config.trainer.deterministic = False
 
 config.checkpoint = ConfigDict()

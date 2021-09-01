@@ -10,8 +10,6 @@ from librosa import power_to_db
 from librosa.feature import melspectrogram
 from nnAudio.Spectrogram import CQT1992v2
 
-from common.visualize import visualize_time_series
-
 def get_spectogram(time_series_data: np.ndarray,
                    spec_type: str,
                    **kwargs) -> np.ndarray:
@@ -23,11 +21,11 @@ def get_spectogram(time_series_data: np.ndarray,
         raise NotImplementedError(spec_type)
     
     spectograms = []
-    for _ in range(3):
-        spec = spectogram_fn(time_series_data)
+    for i in range(3):
+        spec = spectogram_fn(time_series_data[i, ...])
         spectograms.append(spec)
     
-    return np.stack(spectograms)
+    return np.stack(spectograms, axis=0)
 
 def spectrogram_mel(time_series_data: np.ndarray,
                     sr: int = 4096,
