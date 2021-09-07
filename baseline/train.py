@@ -6,7 +6,7 @@ from pytorch_lightning.callbacks import (
     EarlyStopping
 )
 
-from dataloader import G2NetDataModule
+from common.dataloaders import StackedSpectogramDM
 from model import LightningG2Net
 from config import config
 
@@ -57,6 +57,6 @@ model = LightningG2Net(config.model,
                        config.scheduler,
                        config.trainer)
 
-datamodule = G2NetDataModule(config.dataloader)
+datamodule = StackedSpectogramDM(config.dataloader)
 
 trainer.fit(model, datamodule=datamodule)

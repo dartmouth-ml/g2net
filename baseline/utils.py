@@ -8,7 +8,6 @@ import sys
 
 newpath = str(Path(sys.path[-1]).parent)
 sys.path.append(newpath)
-from baseline.dataloader import SpectrogramDataset
 
 DATA_PATH = Path(__file__).resolve().parent.parent.parent.joinpath('DMLG/g2net/data_full')
 DEBUG_DATA_PATH = Path(__file__).resolve().parent.parent.parent.joinpath('DMLG/g2net/data_debug')
@@ -71,6 +70,8 @@ def make_debug_data():
     sample_labels.to_csv(root.parent.joinpath('data_debug', 'labels.csv'), index=False, index_label=None)
 
 def examine_dataset_outputs():
+    from common.dataloaders import SpectrogramDataset
+    
     train_data_path = DEBUG_DATA_PATH
     labels_df_path = DEBUG_DATA_PATH.joinpath('labels.csv')
     labels_df = pd.read_csv(labels_df_path)

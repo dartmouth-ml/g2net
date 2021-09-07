@@ -4,6 +4,12 @@ from torch.optim.lr_scheduler import (
     CosineAnnealingLR,
 )
 
+from torchmetrics import (
+    MetricCollection,
+    Accuracy,
+    AUROC
+)
+
 from torch.optim import Adam
 from torch.nn import CrossEntropyLoss
 
@@ -37,7 +43,11 @@ def configure_lr_schedulers(optimizer, scheduler_config, trainer_config, n_steps
 
         return scheduler_dict
 
-def configure_optimizers(params, optimizer_config, scheduler_config, trainer_config, n_steps_per_epoch):
+def configure_optimizers(params,
+                         optimizer_config,
+                         scheduler_config,
+                         trainer_config,
+                         n_steps_per_epoch):
     if optimizer_config.name == 'Adam':
         optimizer = Adam(params=params, lr=optimizer_config.learning_rate)
     else:
@@ -60,3 +70,11 @@ def configure_loss_fn(loss_fn):
         
         else:
             raise NotImplementedError(loss_fn)
+
+def configure_metrics():
+    metric_collection = MetricCollection([
+            Accuracy(num_classes=2, threshold=0.5, dist_sync_on_step=True),
+            AUROC(num_classes=2, dist_sync_on_step=True),
+    ])
+
+    return metric_collection

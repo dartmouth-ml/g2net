@@ -6,6 +6,7 @@ from typing import (
 import numpy as np
 from functools import partial
 
+from scipy.signal import spectrogram
 from librosa import power_to_db
 from librosa.feature import melspectrogram
 from nnAudio.Spectrogram import CQT1992v2
@@ -17,6 +18,8 @@ def get_spectogram(time_series_data: np.ndarray,
         spectogram_fn = partial(spectrogram_mel, **kwargs)
     elif spec_type == 'cqt':
         spectogram_fn = partial(spectrogram_CQT, **kwargs)
+    elif spec_type == 'fft':
+        spectogram_fn = partial(spectogram_fft, **kwargs)
     else:
         raise NotImplementedError(spec_type)
     
@@ -26,6 +29,12 @@ def get_spectogram(time_series_data: np.ndarray,
         spectograms.append(spec)
     
     return np.stack(spectograms, axis=0)
+
+def spectogram_fft(time_series_data: np.ndarray,
+                   window: Union[str, Tuple, None] = None) -> np.ndarray:
+
+    f, t, spec = spectrogram(time_series_data, fs=2048, window=window)
+    return spec
 
 def spectrogram_mel(time_series_data: np.ndarray,
                     sr: int = 4096,

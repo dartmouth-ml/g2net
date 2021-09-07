@@ -114,7 +114,7 @@ class SpectrogramDataset(Dataset):
     def __len__(self):
         return len(self.file_names)
 
-class G2NetDataModule(LightningDataModule):
+class StackedSpectogramDM(LightningDataModule):
     def __init__(self, config):
         super().__init__()
         self.config = config
