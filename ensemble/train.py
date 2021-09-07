@@ -52,7 +52,7 @@ trainer = pl.Trainer(
     deterministic=config.trainer.deterministic,
 )
 
-model = EnsembleModel(config.model, config.optimizer, config.scheduler)
+model = EnsembleModel(config.model, config.optimizer, config.scheduler, config.trainer)
 datamodule = EnsembleDataModule(config.dataloader)
 datamodule.setup()
 

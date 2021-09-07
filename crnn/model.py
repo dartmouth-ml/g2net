@@ -33,7 +33,7 @@ class CRNNModel(pl.LightningModule):
         self.global_injector = Sequential(Linear(1000, self.stride), Tanh())
         self.classification_head = Linear(1000, 2)
 
-        self.loss_fn = self.configure_loss_fn()
+        self.loss_fn = model_fns.configure_loss_fn(model_config.loss_fn)
         self.metrics = model_fns.configure_metrics()
 
         encoder_layer = TransformerEncoderLayer(d_model=1000,
@@ -43,9 +43,6 @@ class CRNNModel(pl.LightningModule):
 
         self.encoder = TransformerEncoder(encoder_layer,
                                           model_config.transformer_num_layers)
-    
-    def configure_loss_fn(self):
-        return model_fns.configure_loss_fn(self.model_config.loss_fn)
     
     def configure_optimizers(self):
         n_steps_per_epoch = len(self.train_dataloader())

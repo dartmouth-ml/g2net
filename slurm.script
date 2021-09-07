@@ -28,4 +28,4 @@
 
 source /dartfs/rc/lab/D/DMLG/sharedconda/miniconda3/etc/profile.d/conda.sh
 conda activate g2net
-python baseline/train.py
+python crnn/train.py
