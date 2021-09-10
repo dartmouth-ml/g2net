@@ -29,6 +29,7 @@ config.dataloader.bandpass = None
 config.dataloader.return_time_series = False
 
 config.model = ConfigDict()
+config.model.embedding_dim = 1024
 config.model.transformer_nhead = 8
 config.model.transformer_dim_feedforward = 1024
 config.model.transformer_num_layers = 4
@@ -43,7 +44,7 @@ config.scheduler.name = "CosineAnnealing"
 config.scheduler.interval = 'step'
 
 config.logging = ConfigDict()
-config.logging.use_wandb = False
+config.logging.use_wandb = True
 config.logging.project = 'g2net'
 config.logging.entity = 'dmlg'
 config.logging.tags = [config.version]

@@ -30,14 +30,15 @@ class CRNNModel(pl.LightningModule):
         self.trainer_config = trainer_config
 
         self.collater = Sequential(Conv2d(3, 1, 1, 1, 0), ReLU())
-        self.embedder = Sequential(Conv2d(69, 1024, 1, 1, 0), ReLU())
-        # self.global_embedder = resnet18(pretrained=False)
-        self.classification_head = Sequential(Linear(1024, 1024), ReLU(), Linear(1024, 2))
+        self.embedder = Sequential(Conv2d(69, model_config.embedding_dim, 1, 1, 0), ReLU())
+        self.classification_head = Sequential(Linear(model_config.embedding_dim, model_config.embedding_dim),
+                                              ReLU(),
+                                              Linear(model_config.embedding_dim, 2))
 
         self.loss_fn = model_fns.configure_loss_fn(model_config.loss_fn)
         self.metrics = model_fns.configure_metrics()
 
-        encoder_layer = TransformerEncoderLayer(d_model=1024,
+        encoder_layer = TransformerEncoderLayer(d_model=model_config.embedding_dim,
                                                 nhead=model_config.transformer_nhead,
                                                 dim_feedforward=model_config.transformer_dim_feedforward,
                                                 batch_first=True)
