@@ -6,6 +6,7 @@ from typing import (
 import numpy as np
 from functools import partial
 
+from torch import Tensor
 from scipy.signal import spectrogram
 from librosa import power_to_db
 from librosa.feature import melspectrogram
@@ -37,10 +38,13 @@ def spectogram_fft(time_series_data: np.ndarray,
     return spec
 
 def spectrogram_mel(time_series_data: np.ndarray,
-                    sr: int = 4096,
-                    n_mels: int = 128,
+                    sr: int = 2048,
+                    n_mels: int = 256,
                     fmin: int = 20,
-                    fmax: int = 2048,
+                    fmax: int = 1024,
+                    win_length: int = 256,
+                    n_fft: int = 512,
+                    hop_length: int = 8,
                     window: Union[str, Tuple] = '') -> np.ndarray:
     """
     Generic mel spectrogram method. Takes in a variety of (optional) parameters.
@@ -53,8 +57,11 @@ def spectrogram_mel(time_series_data: np.ndarray,
         time_series_data,
         sr=sr,
         n_mels=n_mels,
+        win_length=win_length,
+        n_fft=n_fft,
         fmin=fmin,
         fmax=fmax,
+        hop_length=hop_length,
         window=window
     )
 
@@ -62,7 +69,12 @@ def spectrogram_mel(time_series_data: np.ndarray,
     spec = power_to_db(spec).transpose((1, 0))
     return spec
 
-def spectrogram_CQT(time_series_data, sr=2048, fmin=20, fmax=1024, hop_length=32, window='') -> np.ndarray:
+def spectrogram_CQT(time_series_data: np.ndarray,
+                    sr=2048,
+                    fmin=20,
+                    fmax=1024,
+                    hop_length=32,
+                    window='hann') -> np.ndarray:
     '''Transforms the np_file into cqt spectogram.'''
     cqt_fn = CQT1992v2(
         sr=sr,
@@ -74,5 +86,5 @@ def spectrogram_CQT(time_series_data, sr=2048, fmin=20, fmax=1024, hop_length=32
     )
 
     # Create a spectrogram for each of the 3 sites
-    spec = np.squeeze(cqt_fn(time_series_data))
+    spec = np.squeeze(cqt_fn(Tensor(time_series_data)))
     return spec

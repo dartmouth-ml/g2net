@@ -5,7 +5,9 @@ from torch.nn import (
     TransformerEncoder,
     TransformerEncoderLayer,
     Linear,
+    Conv2d,
     Sequential,
+    ReLU,
     Tanh
 )
 from torch.nn.functional import softmax
@@ -27,16 +29,15 @@ class CRNNModel(pl.LightningModule):
         self.scheduler_config = scheduler_config
         self.trainer_config = trainer_config
 
-        self.stride = model_config.stride
-        self.local_embedder = resnet18(pretrained=False)
-        self.global_embedder = resnet18(pretrained=False)
-        self.global_injector = Sequential(Linear(1000, self.stride), Tanh())
-        self.classification_head = Linear(1000, 2)
+        self.collater = Sequential(Conv2d(3, 1, 1, 1, 0), ReLU())
+        self.embedder = Sequential(Conv2d(69, 1024, 1, 1, 0), ReLU())
+        # self.global_embedder = resnet18(pretrained=False)
+        self.classification_head = Sequential(Linear(1024, 1024), ReLU(), Linear(1024, 2))
 
         self.loss_fn = model_fns.configure_loss_fn(model_config.loss_fn)
         self.metrics = model_fns.configure_metrics()
 
-        encoder_layer = TransformerEncoderLayer(d_model=1000,
+        encoder_layer = TransformerEncoderLayer(d_model=1024,
                                                 nhead=model_config.transformer_nhead,
                                                 dim_feedforward=model_config.transformer_dim_feedforward,
                                                 batch_first=True)
@@ -55,35 +56,19 @@ class CRNNModel(pl.LightningModule):
     def forward(self, x):
         b, c, m, t = x.shape
 
-        # print(f'x.shape: {x.shape}')
         # first embed the image as a whole
-        global_embedding = self.global_embedder(x)
-        # print(f'global embedding: {global_embedding.shape}')
+        # x = self.global_embedder(x)
 
-        # embed in a sequential manner
-        x_seq = einops.rearrange(x, 'b c m (n s) -> (b s) c m n', s=self.stride)
-        local_embeddings = self.local_embedder(x_seq)
-        local_embeddings = einops.rearrange(local_embeddings, '(b s) d -> b s d', b=b)
-        # print(f'local embeddings: {local_embeddings.shape}')
+        # combine 3 sites
+        x = self.collater(x)
+        x = einops.rearrange(x, 'b 1 m t -> b m 1 t')
+        x = self.embedder(x)
+        x = einops.rearrange(x, 'b m 1 t -> b t m')
+        x = self.encoder(x)
 
-        # before processing sequentially, add global embeddings according to injector weights
-        global_embedding_weights = einops.rearrange(self.global_injector(global_embedding),
-                                                    'b s -> b s 1')
-        # print(f'global embedding weights: {global_embedding_weights.shape}')
-        global_embeddings_as_seq = torch.repeat_interleave(einops.rearrange(global_embedding, 'b d -> b 1 d'),
-                                                           repeats=self.stride,
-                                                           dim=1)
-        # print(f'global embedding as seq: {global_embeddings_as_seq.shape}')
-        weighted_global_embeddings = torch.mul(global_embeddings_as_seq, global_embedding_weights)
-        # print(f'weighted ge: {weighted_global_embeddings.shape}')
-        local_embeddings += weighted_global_embeddings
-        # print(f"local embeddings after weight: {local_embeddings.shape}")
-        sequential_embeddings = self.encoder(local_embeddings)
-        # print(f'sequential embeddings: {sequential_embeddings.shape}')
-
-        # take last slice output
-        logits = self.classification_head(sequential_embeddings[:, -1, :])
-        # print(f'logits shape: {logits.shape}')
+        # meanpool all outputs
+        x = torch.mean(x, dim=1)
+        logits = self.classification_head(x)
         return logits
     
     def step(self, batch, mode):

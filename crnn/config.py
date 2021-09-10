@@ -21,20 +21,17 @@ config.dataloader.val_ratio = 0.2
 config.dataloader.batch_size = 64
 config.dataloader.num_workers = 8
 
-config.dataloader.spec_type = 'fft'
-config.dataloader.spec_kwargs = {
-    'window': ('tukey', 4096),
-}
+config.dataloader.spec_type = 'cqt'
+config.dataloader.spec_kwargs = {}
 
-config.dataloader.rescale = [-1, 1]
-config.dataloader.bandpass = [20, 500]
+config.dataloader.rescale = None
+config.dataloader.bandpass = None
 config.dataloader.return_time_series = False
 
 config.model = ConfigDict()
-config.model.stride = 9
 config.model.transformer_nhead = 8
-config.model.transformer_dim_feedforward = 2048
-config.model.transformer_num_layers = 6
+config.model.transformer_dim_feedforward = 1024
+config.model.transformer_num_layers = 4
 config.model.loss_fn = 'CrossEntropy'
 
 config.optimizer = ConfigDict()
@@ -46,7 +43,7 @@ config.scheduler.name = "CosineAnnealing"
 config.scheduler.interval = 'step'
 
 config.logging = ConfigDict()
-config.logging.use_wandb = True
+config.logging.use_wandb = False
 config.logging.project = 'g2net'
 config.logging.entity = 'dmlg'
 config.logging.tags = [config.version]
